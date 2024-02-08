@@ -120,4 +120,17 @@ This document contains my notes on Stanford's online course \href{https://www.yo
   \item You can determine the velocity of the receiver based on the doppler shift in the received signals.
 \end{itemize}
 
+\section{Pseudoranges Including Errors}
+
+\begin{itemize}
+  \item The pseudorange equation is \[\tau^{(n)} = \sqrt{(x_u - x^{(n)})^2 + (y_u - y^{(n)})^2 + (z_u - z^{(n)})^2} + b_u + \nu_u^{(n)}\] where $\tau^{(n)}$ is the pseudorange between the user and the $n$th satellite, $(x,y,z)_u$ are the user's coordinates, $(x,y,z)^{(n)}$ are the $n$th satellite's coordinates, $b_u$ is the user's clock offset, and $\nu_u^{(n)}$ is the error suffered by the user in the measurement from the $n$th satellite.
+
+  \item When a signal travels through the ionosphere and the troposphere its speed reduces and this causes error. If a satellite is directly overhead this is minimised, but if it's on the horizon the signal spends more time in the troposphere and error is increased.
+
+  \item The updated pseudorange equation including these errors is \begin{align*}
+          \tau_C    & = \left( d_u^{(k)} + b_u - \delta B^{(k)} \right) + \delta I_u^{(k)} + \delta T_u^{(k)} + \nu_u^{(k)} \\
+          d_u^{(k)} & = \sqrt{(x_u - x^{(k)})^2 + (y_u - y^{(k)})^2 + (z_i - z^{(k)})}
+        \end{align*} where $d_u^{(k)}$ is the distance between the user and the $k$th satellite, $b_u$ is the user's clock bias, $\delta B^{(k)}$ is the clock bias of the $k$th satellite, $\delta I_u^{(k)}$ is the ionospheric error experienced by the user in measurements from the $k$th satellite, $\delta T_u^{(k)}$ is the tropospheric error experienced by the user in measurements from the $k$th satellite, and $\nu_u^{(k)}$ is all other error experienced by the user in measurements from the $k$th satellite.
+\end{itemize}
+
 \end{document}
