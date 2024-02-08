@@ -100,4 +100,18 @@ This document contains my notes on Stanford's online course \href{https://www.yo
   \item The code for each satellite has good autocorrelation properties (i.e. it's easy to see when the receiver has aligned its code with the transmitted code) and low cross-correlation with other satellites.
 \end{itemize}
 
+\section{Pseudoranging}
+
+\begin{itemize}
+  \item If you take the difference in time between when the satellite transmitted the message and when the receiver received it and multiply that by the speed of light, you get the distance between the satellite and the receiver \[t_\text{received} - t_\text{sent} = \frac{d}{c}.\]
+
+  \item The \textbf{replica} is the receiver's copy of the chipping code that ``slides along'' the received signal to find correlation.
+
+  \item The \textbf{late replica} is a fraction of a chip later than the received signal, the \textbf{prompt replica} is equal to the received signal, and the \textbf{early replica} is a fraction of a chip earlier than the received signal. The receiver tries to keep the three replicas positioned such that the difference in correlation values between the early and late replicas is $0$.
+
+  \item The clocks of all the satellites are synchonised, but the receiver's clock may differ. For this reason we introduce the \textbf{clock bias} $b_u$ such that the adjusted time of receival is \[t_\text{u} = t_\text{received} + b_u\] and the actual distance can be calculated from \[t_\text{u} - t_\text{send} = \frac{d}{c} + b_u.\]
+
+  \item Ideally we would only need to solve for $x$, $y$, and $z$ to determine out position, but we also need to solve for $b_u$ to determine the receiver's clock bias. For this reason at least four satellites need to be in view.
+\end{itemize}
+
 \end{document}
