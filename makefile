@@ -5,6 +5,7 @@ default:
 
 .PHONY: format
 format:
+	isort --profile black gpsreceiver
 	black gpsreceiver
 
 .PHONY: type_check
