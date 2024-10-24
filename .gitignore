@@ -3,3 +3,8 @@
 
 # Project
 data
+
+# Python
+__pycache__
+.env
+.mypy_cache
