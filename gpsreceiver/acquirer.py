@@ -56,7 +56,7 @@ class Acquirer:
             maxlen=MS_OF_SAMPLES_REQUIRED_TO_PERFORM_ACQUISITION
         )
 
-    def step(
+    def step_1ms(
         self, samples: OneMillisecondOfSamples, tracked_satellite_ids: set[SatelliteId]
     ) -> list[Acquisition]:
         """Handle 1 ms of samples.
