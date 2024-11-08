@@ -20,17 +20,17 @@ from .units import SampleTimestampSeconds, SatelliteId
 class Acquisition:
     """The parameters resulting from acquisition of a GPS satellite signal."""
 
+    # An estimate of the carrier signal's frequency shift.
+    #
+    # Note that this is the observed frequency shift, i.e. we must frequency
+    # shift a received signal by the negative of this value to undo it.
+    carrier_frequency_shift: float
+
     # An estimate of the carrier signal's phase.
     #
     # This can be inaccurate if we encountered a navigation bit change during
     # acquisition, but the Costas loop in the tracking phase should fix it.
     carrier_phase: float
-
-    # An estimate of the carrier signal's Doppler shift.
-    #
-    # Note that this is the observed Doppler shift, i.e. we must frequency shift
-    # a received signal by the negative of this value to undo Doppler shift.
-    doppler_shift: float
 
     # An estimate of the C/A PRN code's phase within our 1 ms samples.
     #
@@ -132,7 +132,7 @@ class Acquirer:
             ):
                 best_acquisition = new_acquisition
 
-            centre_frequency_shift = best_acquisition.doppler_shift
+            centre_frequency_shift = best_acquisition.carrier_frequency_shift
             half_frequency_shift_range /= 2
 
         if (
@@ -194,8 +194,8 @@ class Acquirer:
         )
 
         return Acquisition(
+            carrier_frequency_shift=frequency_shifts[frequency_shift_index],
             carrier_phase=np.angle(coherent_sums[frequency_shift_index, prn_phase]),
-            doppler_shift=frequency_shifts[frequency_shift_index],
             prn_phase=int(prn_phase),
             satellite_id=satellite_id,
             strength=peak_correlation / mean_correlation,
