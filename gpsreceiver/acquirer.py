@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .antenna import OneMillisecondOfSamples
+from .antenna import OneMsOfSamples
 from .config import (
     ACQUISITION_INTERVAL_SECONDS,
     ACQUISITION_STRENGTH_THRESHOLD,
@@ -52,12 +52,12 @@ class Acquirer:
 
     def __init__(self) -> None:
         self._acquisition_last_performed_at: SampleTimestampSeconds = 0
-        self._samples = deque[OneMillisecondOfSamples](
+        self._samples = deque[OneMsOfSamples](
             maxlen=MS_OF_SAMPLES_REQUIRED_TO_PERFORM_ACQUISITION
         )
 
-    def step_1ms(
-        self, samples: OneMillisecondOfSamples, tracked_satellite_ids: set[SatelliteId]
+    def handle_1ms_of_samples(
+        self, samples: OneMsOfSamples, tracked_satellite_ids: set[SatelliteId]
     ) -> list[Acquisition]:
         """Handle 1 ms of samples.
 
@@ -89,6 +89,7 @@ class Acquirer:
             if acquisition is not None:
                 acquisitions.append(acquisition)
 
+        self._acquisition_last_performed_at = samples.end_time
         return acquisitions
 
     def _acquire_satellite(self, satellite_id: SatelliteId) -> Acquisition | None:

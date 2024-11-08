@@ -9,7 +9,7 @@ from .units import SampleTimestampSeconds
 
 
 @dataclass
-class OneMillisecondOfSamples:
+class OneMsOfSamples:
     # The time just after the last sample was taken.
     end_time: SampleTimestampSeconds
 
@@ -28,7 +28,7 @@ class Antenna(ABC):
     """
 
     @abstractmethod
-    def sample_1ms(self) -> OneMillisecondOfSamples:
+    def sample_1ms(self) -> OneMsOfSamples:
         """Sample 1 ms of data from the antenna."""
 
         pass
@@ -47,7 +47,7 @@ class FileAntenna(Antenna):
         self._offset_in_samples: int = 0
         self._path = path
 
-    def sample_1ms(self) -> OneMillisecondOfSamples:
+    def sample_1ms(self) -> OneMsOfSamples:
         if (
             self._offset_in_samples + SAMPLES_PER_MILLISECOND
             >= self._file_size_in_samples
@@ -64,7 +64,7 @@ class FileAntenna(Antenna):
         start_time = self._offset_in_samples / SAMPLES_PER_SECOND
         self._offset_in_samples += SAMPLES_PER_MILLISECOND
 
-        return OneMillisecondOfSamples(
+        return OneMsOfSamples(
             end_time=self._offset_in_samples / SAMPLES_PER_SECOND,
             samples=data[0::2] + (1j * data[1::2]),
             start_time=start_time,
