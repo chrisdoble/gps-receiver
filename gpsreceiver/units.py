@@ -7,8 +7,8 @@
 # system clock (e.g. performing acquisition every x s).
 SampleTimestampSeconds = float
 
-# The ID of a GPS satellite based on its PRN signal number. This can be an
-# integer between 1 and 32 inclusive, but PRN 1 is not currently in use[1].
+# The ID of a GPS satellite based on its PRN number. This can be an integer
+# between 1 and 32 inclusive, but PRN number 1 is not currently in use[1].
 #
 # 1: https://en.wikipedia.org/wiki/List_of_GPS_satellites#PRN_status_by_satellite_block
 SatelliteId = int

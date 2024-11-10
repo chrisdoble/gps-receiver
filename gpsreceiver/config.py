@@ -2,7 +2,7 @@ from .units import SampleTimestampSeconds, SatelliteId
 
 # Sampling
 
-# A GPS satellite's navigation message (50 bps) is XORed with its PRN
+# A GPS satellite's navigation message (50 bps) is XORed with its C/A PRN code
 # (1.023 Mbps) and the result is BPSK modulated onto a carrier wave whose
 # frequency is 1575.42 MHz. BPSK modulation results in a main lobe with a
 # bandwidth equal to twice the data rate - in this case that's 2.046 MHz. That

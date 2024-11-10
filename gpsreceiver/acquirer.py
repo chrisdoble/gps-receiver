@@ -12,7 +12,7 @@ from .config import (
     SAMPLES_PER_MILLISECOND,
     SAMPLES_PER_SECOND,
 )
-from .prns import COMPLEX_UPSAMPLED_PRNS_BY_SATELLITE_ID
+from .prn_codes import COMPLEX_UPSAMPLED_PRN_CODES_BY_SATELLITE_ID
 from .units import SampleTimestampSeconds, SatelliteId
 
 
@@ -35,7 +35,7 @@ class Acquisition:
     # An estimate of the C/A PRN code's phase within our 1 ms samples.
     #
     # This is in units of half a chip so will be in the range [0, 2045].
-    prn_phase: int
+    prn_code_phase: int
 
     # The ID of the GPS satellite whose signal was acquired.
     satellite_id: SatelliteId
@@ -156,19 +156,19 @@ class Acquirer:
         # integration for every 1 ms period of samples and add the results. This
         # strengthens weak signals as if the 1 ms period were extended, but
         # minimises the issue of navigation bit changes affecting the magnitude
-        # of the correlation. We then find the frequency shift and PRN phase
-        # that result in the greatest non-coherent sum - this is the strongest
+        # of the correlation. We then find the frequency shift and PRN code
+        # phase that give the greatest non-coherent sum - this is the strongest
         # signal. The argument of the corresponding coherent sum is an estimate
         # of the phase of the carrier wave. Finally, the peak-to-mean ratio of
         # all correlations for the strongest frequency shift gives the strength.
 
         ts = np.arange(SAMPLES_PER_MILLISECOND) / SAMPLES_PER_SECOND
 
-        prn = COMPLEX_UPSAMPLED_PRNS_BY_SATELLITE_ID[satellite_id]
-        prn_fft_conj = np.conj(np.fft.fft(prn))
+        prn_code = COMPLEX_UPSAMPLED_PRN_CODES_BY_SATELLITE_ID[satellite_id]
+        prn_code_fft_conj = np.conj(np.fft.fft(prn_code))
 
-        coherent_sums = np.zeros((len(frequency_shifts), len(prn)), dtype=complex)
-        magnitude_sums = np.zeros((len(frequency_shifts), len(prn)))
+        coherent_sums = np.zeros((len(frequency_shifts), len(prn_code)), dtype=complex)
+        magnitude_sums = np.zeros((len(frequency_shifts), len(prn_code)))
 
         for i, f in enumerate(frequency_shifts):
             for samples in self._samples:
@@ -176,16 +176,18 @@ class Acquirer:
                 frequency_shift = np.exp(-2j * np.pi * f * (samples.start_time + ts))
                 shifted_samples = samples.samples * frequency_shift
 
-                correlation = np.fft.ifft(np.fft.fft(shifted_samples) * prn_fft_conj)
+                correlation = np.fft.ifft(
+                    np.fft.fft(shifted_samples) * prn_code_fft_conj
+                )
 
                 coherent_sums[i] += correlation
                 magnitude_sums[i] += np.abs(correlation)
 
-        frequency_shift_index, prn_phase = np.unravel_index(
+        frequency_shift_index, prn_code_phase = np.unravel_index(
             np.argmax(magnitude_sums), magnitude_sums.shape
         )
 
-        peak_correlation = magnitude_sums[frequency_shift_index, prn_phase]
+        peak_correlation = magnitude_sums[frequency_shift_index, prn_code_phase]
         mean_correlation = np.mean(
             magnitude_sums[
                 frequency_shift_index,
@@ -195,8 +197,10 @@ class Acquirer:
 
         return Acquisition(
             carrier_frequency_shift=frequency_shifts[frequency_shift_index],
-            carrier_phase=np.angle(coherent_sums[frequency_shift_index, prn_phase]),
-            prn_phase=int(prn_phase),
+            carrier_phase=np.angle(
+                coherent_sums[frequency_shift_index, prn_code_phase]
+            ),
+            prn_code_phase=int(prn_code_phase),
             satellite_id=satellite_id,
             strength=peak_correlation / mean_correlation,
         )
