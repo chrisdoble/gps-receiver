@@ -3,13 +3,17 @@ This repository contains my GPS receiver project.
 # Development
 
 ```bash
+# Setup
 python -m venv .env
 source .env/bin/activate
 pip install -r requirements.txt
 
-# Format code
+# Autoformat
 make format
 
-# Type check code
+# Type check
 make type_check
+
+# Run
+python -m gpsreceiver
 ```
