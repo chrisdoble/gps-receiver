@@ -1,3 +1,5 @@
+import numpy as np
+
 from .units import SampleTimestampSeconds, SatelliteId
 
 # Sampling
@@ -23,6 +25,9 @@ from .units import SampleTimestampSeconds, SatelliteId
 # same length. This avoids needing to e.g. pad the local replica with zeroes.
 SAMPLES_PER_MILLISECOND: int = 2046
 SAMPLES_PER_SECOND = SAMPLES_PER_MILLISECOND * 1000
+
+# The timestamp of each sample within a 1 ms sampling period.
+SAMPLE_TIMESTAMPS = np.arange(SAMPLES_PER_MILLISECOND) / SAMPLES_PER_SECOND
 
 # Acquisition
 
@@ -57,3 +62,38 @@ ALL_SATELLITE_IDS: set[SatelliteId] = set(range(2, 33))
 # change which can negatively affect the carrier wave phase estimate. That's not
 # too big of an issue as the tracking loop will eventually find the right value.
 MS_OF_SAMPLES_REQUIRED_TO_PERFORM_ACQUISITION: int = 10
+
+# Tracking
+
+# For each satellite, a buffer of the most recent tracking parameters (carrier
+# frequency shift, PRN code phase shift, etc.) are recorded to aide debugging
+# and graphing. This constant controls how many seconds of data are recorded.
+TRACKING_HISTORY_SIZE_SECONDS: SampleTimestampSeconds = 5
+
+# The number of values to be stored in each tracking history buffer.
+#
+# This assumes we recalculate tracking parameters once per millisecond.
+TRACKING_HISTORY_SIZE = int(TRACKING_HISTORY_SIZE_SECONDS * 1000)
+
+# The gain to use in the PRN code phase shift tracking loop.
+#
+# This determines how much noise affects the loop and how quickly it can respond
+# to changes in the phase shift. I don't have a deep understanding of this value
+# but this is what Claude suggests and is what Gypsum uses[1].
+#
+# 1: https://github.com/codyd51/gypsum/blob/b9a5b4ec98557cf107f589dbffa0ad522851c14c/gypsum/tracker.py#L298
+PRN_CODE_PHASE_SHIFT_TRACKING_LOOP_GAIN = 0.002
+
+# The gains to use in the carrier frequency/phase shift tracking loop.
+#
+# These constants are also called beta and alpha in some implementations of
+# Costas loops. However, unlike other Costas loops I've seen, these values are
+# multiplied by the tracker update interval (currently 0.001s) when used so they
+# are quite a bit larger than other loops' constants. This has the benefit that
+# they don't need to be updated if the tracker update interval changes.
+#
+# I tried to find definitions of these values in terms of the loop's bandwidth
+# and damping factor but there didn't seem to be consensus. My DSP theory isn't
+# strong enough to derive them myself so the values were found experiementally.
+CARRIER_FREQUENCY_SHIFT_TRACKING_LOOP_GAIN = 20
+CARRIER_PHASE_SHIFT_TRACKING_LOOP_GAIN = 500

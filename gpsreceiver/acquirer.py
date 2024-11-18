@@ -9,6 +9,7 @@ from .config import (
     ACQUISITION_STRENGTH_THRESHOLD,
     ALL_SATELLITE_IDS,
     MS_OF_SAMPLES_REQUIRED_TO_PERFORM_ACQUISITION,
+    SAMPLE_TIMESTAMPS,
     SAMPLES_PER_MILLISECOND,
     SAMPLES_PER_SECOND,
 )
@@ -18,24 +19,25 @@ from .units import SampleTimestampSeconds, SatelliteId
 
 @dataclass
 class Acquisition:
-    """The parameters resulting from acquisition of a GPS satellite signal."""
+    """The parameters resulting from acquisition of a GPS satellite signal.
 
-    # An estimate of the carrier signal's frequency shift.
-    #
-    # Note that this is the observed frequency shift, i.e. we must frequency
-    # shift a received signal by the negative of this value to undo it.
+    Note that the frequency/phase shift parameters are the observed shifts, i.e.
+    we must negate them on a received signal to perform carrier wipeoff.
+    """
+
+    # An estimate of the carrier signal's frequency shift in Hz.
     carrier_frequency_shift: float
 
-    # An estimate of the carrier signal's phase.
+    # An estimate of the carrier signal's phase shift in radians.
     #
     # This can be inaccurate if we encountered a navigation bit change during
     # acquisition, but the Costas loop in the tracking phase should fix it.
-    carrier_phase: float
+    carrier_phase_shift: float
 
-    # An estimate of the C/A PRN code's phase within our 1 ms samples.
+    # An estimate of the C/A PRN code's phase shift in half-chips.
     #
-    # This is in units of half a chip so will be in the range [0, 2045].
-    prn_code_phase: int
+    # This will be in the range [0, 2045].
+    prn_code_phase_shift: int
 
     # The ID of the GPS satellite whose signal was acquired.
     satellite_id: SatelliteId
@@ -61,7 +63,7 @@ class Acquirer:
     ) -> list[Acquisition]:
         """Handle 1 ms of samples.
 
-        This might simply store the samples for future use or it could result in
+        This may simply store the samples for future use or it could result in
         attempting acquisition of satellites that aren't already being tracked
         (as determined by ``tracked_satellite_ids``) depending on how many ms of
         samples we've already collected and when we last attempted acquisition.
@@ -162,8 +164,6 @@ class Acquirer:
         # of the phase of the carrier wave. Finally, the peak-to-mean ratio of
         # all correlations for the strongest frequency shift gives the strength.
 
-        ts = np.arange(SAMPLES_PER_MILLISECOND) / SAMPLES_PER_SECOND
-
         prn_code = COMPLEX_UPSAMPLED_PRN_CODES_BY_SATELLITE_ID[satellite_id]
         prn_code_fft_conj = np.conj(np.fft.fft(prn_code))
 
@@ -173,8 +173,9 @@ class Acquirer:
         for i, f in enumerate(frequency_shifts):
             for samples in self._samples:
                 # Perform carrier wipeoff.
-                frequency_shift = np.exp(-2j * np.pi * f * (samples.start_time + ts))
-                shifted_samples = samples.samples * frequency_shift
+                shifted_samples = samples.samples * np.exp(
+                    -2j * np.pi * f * (SAMPLE_TIMESTAMPS + samples.start_time)
+                )
 
                 correlation = np.fft.ifft(
                     np.fft.fft(shifted_samples) * prn_code_fft_conj
@@ -197,10 +198,10 @@ class Acquirer:
 
         return Acquisition(
             carrier_frequency_shift=frequency_shifts[frequency_shift_index],
-            carrier_phase=np.angle(
+            carrier_phase_shift=np.angle(
                 coherent_sums[frequency_shift_index, prn_code_phase]
             ),
-            prn_code_phase=int(prn_code_phase),
+            prn_code_phase_shift=int(prn_code_phase),
             satellite_id=satellite_id,
             strength=peak_correlation / mean_correlation,
         )
