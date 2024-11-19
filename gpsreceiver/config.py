@@ -1,6 +1,6 @@
 import numpy as np
 
-from .units import SampleTimestampSeconds, SatelliteId
+from .types import SampleTimestampSeconds, SatelliteId
 
 # Sampling
 
@@ -97,3 +97,16 @@ PRN_CODE_PHASE_SHIFT_TRACKING_LOOP_GAIN = 0.002
 # strong enough to derive them myself so the values were found experiementally.
 CARRIER_FREQUENCY_SHIFT_TRACKING_LOOP_GAIN = 20
 CARRIER_PHASE_SHIFT_TRACKING_LOOP_GAIN = 500
+
+# Navigation data demodulation
+
+# How many bits worth of pseudosymbols must ``PseudosymbolIntegrator`` collect
+# before it may attempt to determine the boundaries between navigation bits.
+#
+# Before ``PseudosymbolIntegrator`` can group pseudosymbols into bits it needs
+# to know where one bit ends and the next begins. To do this it collects many
+# pseudosymbols into an array, then it finds the offset into that array that
+# best splits the pseudosymbols into like groups of 20. Now they can be grouped
+# into bits. This constant determines how many "bits worth" of pseudosymbols
+# (i.e. multiples of 20) must be collected before this process can occur.
+BITS_REQUIRED_TO_DETECT_BOUNDARIES = 20

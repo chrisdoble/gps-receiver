@@ -13,12 +13,15 @@ from .config import (
     TRACKING_HISTORY_SIZE,
 )
 from .prn_codes import COMPLEX_UPSAMPLED_PRN_CODES_BY_SATELLITE_ID
+from .pseudosymbol_integrator import PseudosymbolIntegrator
 
 
 class Tracker:
     """Tracks a satellite's signal and decodes pseudosymbols."""
 
-    def __init__(self, acquisition: Acquisition) -> None:
+    def __init__(
+        self, acquisition: Acquisition, pseudosymbol_integrator: PseudosymbolIntegrator
+    ) -> None:
         # The most recent estimates of the carrier's frequency shift in Hz.
         self._carrier_frequency_shifts = deque[float](
             [acquisition.carrier_frequency_shift], maxlen=TRACKING_HISTORY_SIZE
@@ -47,6 +50,8 @@ class Tracker:
             [acquisition.prn_code_phase_shift], maxlen=TRACKING_HISTORY_SIZE
         )
 
+        self._pseudosymbol_integrator = pseudosymbol_integrator
+
     def handle_1ms_of_samples(self, samples: OneMsOfSamples) -> None:
         """Uses 1 ms of samples to determine the transmitted pseudosymbol and
         update tracking parameters."""
@@ -73,6 +78,11 @@ class Tracker:
         prn_code = np.roll(self._prn_code, int(self._prn_code_phase_shift))
         correlation = np.sum(shifted_samples * prn_code)
         self._correlations.append(correlation)
+
+        # Decode and handle the pseudosymbol.
+        self._pseudosymbol_integrator.handle_pseudosymbol(
+            -1 if correlation.real < 0 else 1
+        )
 
         # Update the carrier wave frequency/phase shift.
         self._track_carrier(correlation)

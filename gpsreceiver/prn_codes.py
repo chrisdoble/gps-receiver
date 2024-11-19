@@ -14,7 +14,7 @@ from typing import Iterator
 import numpy as np
 
 from .config import SAMPLES_PER_MILLISECOND
-from .units import SatelliteId
+from .types import SatelliteId
 
 
 def _lfsr(outputs: list[int], taps: list[int]) -> Iterator[int]:

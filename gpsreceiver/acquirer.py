@@ -14,7 +14,7 @@ from .config import (
     SAMPLES_PER_SECOND,
 )
 from .prn_codes import COMPLEX_UPSAMPLED_PRN_CODES_BY_SATELLITE_ID
-from .units import SampleTimestampSeconds, SatelliteId
+from .types import SampleTimestampSeconds, SatelliteId
 
 
 @dataclass
