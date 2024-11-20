@@ -1,13 +1,16 @@
+import logging
 from collections import Counter
 
 import numpy as np
 
+from .bit_integrator import BitIntegrator
 from .config import BITS_REQUIRED_TO_DETECT_BOUNDARIES
-from .types import Pseudosymbol, UnresolvedBit
+from .types import Pseudosymbol, SatelliteId, UnresolvedBit
+
+PSEUDOSYMBOLS_PER_BIT = 20
 
 # How many pseudosymbols we must collect before we may attempt to determine
-# the boundaries between navigation bits. There are 20 pseudosymbols per bit.
-PSEUDOSYMBOLS_PER_BIT = 20
+# the boundaries between navigation bits.
 PSEUDOSYMBOLS_REQUIRED_TO_DETECT_BOUNDARIES = (
     BITS_REQUIRED_TO_DETECT_BOUNDARIES * PSEUDOSYMBOLS_PER_BIT
 )
@@ -19,6 +22,8 @@ PSEUDOSYMBOLS_REQUIRED_TO_DETECT_BOUNDARIES = (
 # pseudosymbols of each phase (-1 and +1) before attempting to calculate the
 # offset. This constant determines how many of each phase must be collected.
 PSEUDOSYMBOLS_REQUIRED_PER_PHASE = PSEUDOSYMBOLS_REQUIRED_TO_DETECT_BOUNDARIES / 2
+
+logger = logging.getLogger(__name__)
 
 
 class PseudosymbolIntegrator:
@@ -38,11 +43,16 @@ class PseudosymbolIntegrator:
     forwards the results to a ``BitIntegrator``.
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self, bit_integrator: BitIntegrator, satellite_id: SatelliteId
+    ) -> None:
+        self._bit_integrator = bit_integrator
+
         # Whether we've found the boundary between navigation bits.
         self._is_synchronised = False
 
         self._pseudosymbols: list[Pseudosymbol] = []
+        self._satellite_id = satellite_id
 
     def handle_pseudosymbol(self, pseudosymbol: Pseudosymbol) -> None:
         self._pseudosymbols.append(pseudosymbol)
@@ -68,10 +78,10 @@ class PseudosymbolIntegrator:
             # Determine the (phase ambiguous) bit.
             counter = Counter(pseudosymbols)
             unresolved_bit: UnresolvedBit = counter.most_common(1)[0][0]
-            print(unresolved_bit)
+            self._bit_integrator.handle_unresolved_bit(unresolved_bit)
 
     def _synchronise(self) -> None:
-        assert not self._is_synchronised, "Already synchronised"
+        assert not self._is_synchronised, "Synchronisation has already occured"
 
         # Calculate a score for each possible offset.
         #
@@ -92,6 +102,7 @@ class PseudosymbolIntegrator:
         best_offset = np.argmax(offset_scores)
         self._pseudosymbols = self._pseudosymbols[best_offset:]
 
+        logger.info(f"Performed bit synchronisation for satellite {self._satellite_id}")
         self._is_synchronised = True
 
 

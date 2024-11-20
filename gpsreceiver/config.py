@@ -101,7 +101,7 @@ CARRIER_PHASE_SHIFT_TRACKING_LOOP_GAIN = 500
 # Navigation data demodulation
 
 # How many bits worth of pseudosymbols must ``PseudosymbolIntegrator`` collect
-# before it may attempt to determine the boundaries between navigation bits.
+# before it can determine the boundaries between navigation bits.
 #
 # Before ``PseudosymbolIntegrator`` can group pseudosymbols into bits it needs
 # to know where one bit ends and the next begins. To do this it collects many
@@ -110,3 +110,7 @@ CARRIER_PHASE_SHIFT_TRACKING_LOOP_GAIN = 500
 # into bits. This constant determines how many "bits worth" of pseudosymbols
 # (i.e. multiples of 20) must be collected before this process can occur.
 BITS_REQUIRED_TO_DETECT_BOUNDARIES = 20
+
+# How many preambles ``BitIntegrator`` must detect in order to determine the
+# boundaries between subframes and the overall bit phase.
+PREAMBLES_REQUIRED_TO_DETERMINE_BIT_PHASE = 3

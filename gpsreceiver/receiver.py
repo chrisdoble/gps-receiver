@@ -1,9 +1,11 @@
-import pprint
+import logging
 
 from .acquirer import Acquirer
 from .antenna import Antenna
 from .pipeline import Pipeline
 from .types import SatelliteId
+
+logger = logging.getLogger(__name__)
 
 
 class Receiver:
@@ -22,6 +24,15 @@ class Receiver:
             assert (
                 acquisition.satellite_id not in self._pipelines_by_satellite_id
             ), f"Received acquisition for already tracked satellite {acquisition.satellite_id}"
+
+            logger.info(
+                f"Acquired satellite {acquisition.satellite_id}:"
+                f" carrier_frequency_shift={acquisition.carrier_frequency_shift},"
+                f" carrier_phase_shift={acquisition.carrier_phase_shift},"
+                f" prn_code_phase_shift={acquisition.prn_code_phase_shift},"
+                f" strength={acquisition.strength}"
+            )
+
             self._pipelines_by_satellite_id[acquisition.satellite_id] = Pipeline(
                 acquisition
             )

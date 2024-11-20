@@ -1,5 +1,11 @@
 from typing import Literal
 
+# A bit.
+#
+# This is the result of ``BitIntegrator`` determining the overall bit phase and
+# applying it to an ``UnresolvedBit``. There's no phase ambiguity here.
+Bit = Literal[0, 1]
+
 # A pseudosymbol emitted by a ``Tracker``.
 #
 # Can also be considered one twentieth of a navigation bit.
