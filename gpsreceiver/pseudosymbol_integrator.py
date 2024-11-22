@@ -7,12 +7,12 @@ from .bit_integrator import BitIntegrator
 from .config import BITS_REQUIRED_TO_DETECT_BOUNDARIES
 from .types import Pseudosymbol, SatelliteId, UnresolvedBit
 
-PSEUDOSYMBOLS_PER_BIT = 20
+_PSEUDOSYMBOLS_PER_BIT = 20
 
 # How many pseudosymbols we must collect before we may attempt to determine
 # the boundaries between navigation bits.
-PSEUDOSYMBOLS_REQUIRED_TO_DETECT_BOUNDARIES = (
-    BITS_REQUIRED_TO_DETECT_BOUNDARIES * PSEUDOSYMBOLS_PER_BIT
+_PSEUDOSYMBOLS_REQUIRED_TO_DETECT_BOUNDARIES = (
+    BITS_REQUIRED_TO_DETECT_BOUNDARIES * _PSEUDOSYMBOLS_PER_BIT
 )
 
 # How many pseudosymbols of each phase we must collect.
@@ -21,7 +21,7 @@ PSEUDOSYMBOLS_REQUIRED_TO_DETECT_BOUNDARIES = (
 # possible to find the best offset. To avoid this we collect a minimum number of
 # pseudosymbols of each phase (-1 and +1) before attempting to calculate the
 # offset. This constant determines how many of each phase must be collected.
-PSEUDOSYMBOLS_REQUIRED_PER_PHASE = PSEUDOSYMBOLS_REQUIRED_TO_DETECT_BOUNDARIES / 2
+_PSEUDOSYMBOLS_REQUIRED_PER_PHASE = _PSEUDOSYMBOLS_REQUIRED_TO_DETECT_BOUNDARIES / 2
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ class PseudosymbolIntegrator:
 
     Pseudosymbols are computed 1000 times per second and the navigation message
     is transmitted at 50 bps, so there are 20 pseudosymbols per navigation bit.
-    In theory all 20 should have the same phase. In practice noise, samples
+    In theory all 20 should have the same phase. In practice, noise, samples
     taken during bit transitions, and weak signals cause some to be incorrect.
 
     This class takes pseudosymbols from a ``Tracker``, determines which groups
@@ -62,18 +62,18 @@ class PseudosymbolIntegrator:
             # …but only if we have enough data.
             counter = Counter(self._pseudosymbols)
             if (
-                counter[-1] >= PSEUDOSYMBOLS_REQUIRED_PER_PHASE
-                and counter[1] >= PSEUDOSYMBOLS_REQUIRED_PER_PHASE
+                counter[-1] >= _PSEUDOSYMBOLS_REQUIRED_PER_PHASE
+                and counter[1] >= _PSEUDOSYMBOLS_REQUIRED_PER_PHASE
             ):
                 self._synchronise()
 
         # Group pseudosymbols into bits as long as we have enough data.
         while (
-            len(self._pseudosymbols) >= PSEUDOSYMBOLS_PER_BIT and self._is_synchronised
+            len(self._pseudosymbols) >= _PSEUDOSYMBOLS_PER_BIT and self._is_synchronised
         ):
             # Extract the pseudosymbols comprising the next bit.
-            pseudosymbols = self._pseudosymbols[:PSEUDOSYMBOLS_PER_BIT]
-            del self._pseudosymbols[:PSEUDOSYMBOLS_PER_BIT]
+            pseudosymbols = self._pseudosymbols[:_PSEUDOSYMBOLS_PER_BIT]
+            del self._pseudosymbols[:_PSEUDOSYMBOLS_PER_BIT]
 
             # Determine the (phase ambiguous) bit.
             counter = Counter(pseudosymbols)
@@ -92,8 +92,8 @@ class PseudosymbolIntegrator:
         #
         # An offset's score is the mean of its chunks' sums.
         offset_scores: list[float] = []
-        for offset in range(PSEUDOSYMBOLS_PER_BIT):
-            chunks = _chunks(self._pseudosymbols[offset:], PSEUDOSYMBOLS_PER_BIT)
+        for offset in range(_PSEUDOSYMBOLS_PER_BIT):
+            chunks = _chunks(self._pseudosymbols[offset:], _PSEUDOSYMBOLS_PER_BIT)
             offset_scores.append(np.mean(np.abs(np.sum(chunks, axis=1))))
 
         # Find the offset with the best score. If it is non-zero then there are

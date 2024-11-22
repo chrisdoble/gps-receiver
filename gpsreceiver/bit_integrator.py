@@ -6,7 +6,7 @@ import numpy as np
 from .config import PREAMBLES_REQUIRED_TO_DETERMINE_BIT_PHASE
 from .types import Bit, SatelliteId, UnresolvedBit
 
-BITS_PER_SUBFRAME = 300
+_BITS_PER_SUBFRAME = 300
 
 # How many bits we must collect before we may attempt to determine the
 # boundaries between subframes and the overall bit phase.
@@ -15,17 +15,17 @@ BITS_PER_SUBFRAME = 300
 # that even after we've collected ``PREAMBLES_REQUIRED_TO_DETERMINE_BIT_PHASE``
 # subframes' worth of bits, the number of preambles we find will likely be one
 # fewer than that. Add one to the constant to avoid this issue.
-BITS_REQUIRED_TO_DETERMINE_BIT_PHASE = (
+_BITS_REQUIRED_TO_DETERMINE_BIT_PHASE = (
     PREAMBLES_REQUIRED_TO_DETERMINE_BIT_PHASE + 1
-) * BITS_PER_SUBFRAME
+) * _BITS_PER_SUBFRAME
 
 # The fixed TLM word preamble and its inverse.
 #
 # These are used to determine the boundaries between subframes and the overall
 # bit phase. They're defined as ``UnresolvedBit``s rather than ``Bit``s so they
 # can be matched against the collected array of ``UnresolvedBit``s.
-TLM_PREAMBLE: list[UnresolvedBit] = [1, -1, -1, -1, 1, -1, 1, 1]
-INVERSE_TLM_PREAMBLE: list[UnresolvedBit] = [-1, 1, 1, 1, -1, 1, -1, -1]
+_TLM_PREAMBLE: list[UnresolvedBit] = [1, -1, -1, -1, 1, -1, 1, 1]
+_INVERSE_TLM_PREAMBLE: list[UnresolvedBit] = [-1, 1, 1, 1, -1, 1, -1, -1]
 
 logger = logging.getLogger(__name__)
 
@@ -54,25 +54,25 @@ class BitIntegrator:
 
         # Determine the bit phase.
         if (
-            len(self._unresolved_bits) >= BITS_REQUIRED_TO_DETERMINE_BIT_PHASE
+            len(self._unresolved_bits) >= _BITS_REQUIRED_TO_DETERMINE_BIT_PHASE
             and self._bit_phase is None
         ):
             self._determine_bit_phase()
 
         # Group bits into subframes as long as we have enough data.
         while (
-            len(self._unresolved_bits) >= BITS_PER_SUBFRAME
+            len(self._unresolved_bits) >= _BITS_PER_SUBFRAME
             and self._bit_phase is not None
         ):
-            unresolved_bits = self._unresolved_bits[:BITS_PER_SUBFRAME]
-            del self._unresolved_bits[:BITS_PER_SUBFRAME]
+            unresolved_bits = self._unresolved_bits[:_BITS_PER_SUBFRAME]
+            del self._unresolved_bits[:_BITS_PER_SUBFRAME]
 
             bits = [self._resolve_bit(ub) for ub in unresolved_bits]
 
     def _determine_bit_phase(self) -> None:
         assert self._bit_phase is None, "The bit phase has already been determined"
 
-        for offset in range(BITS_PER_SUBFRAME):
+        for offset in range(_BITS_PER_SUBFRAME):
             unresolved_bits = self._unresolved_bits[offset:]
             determined = False
 
@@ -82,12 +82,12 @@ class BitIntegrator:
             #
             # If ``offset`` is non-zero then there's a partial subframe at the
             # start of ``self._unresolved_bits`` which can be discarded.
-            if self._all_subframes_start_with_preamble(TLM_PREAMBLE, unresolved_bits):
+            if self._all_subframes_start_with_preamble(_TLM_PREAMBLE, unresolved_bits):
                 determined = True
                 self._bit_phase = 1
 
             if self._all_subframes_start_with_preamble(
-                INVERSE_TLM_PREAMBLE, unresolved_bits
+                _INVERSE_TLM_PREAMBLE, unresolved_bits
             ):
                 determined = True
                 self._bit_phase = -1
@@ -112,11 +112,11 @@ class BitIntegrator:
             unresolved_bits
         ), "The preamble must be equal or shorter in length than the unresolved bits"
         assert (
-            len(unresolved_bits) >= BITS_PER_SUBFRAME
+            len(unresolved_bits) >= _BITS_PER_SUBFRAME
         ), "Not enough unresolved bits for a subframe"
 
         for i in range(
-            0, len(unresolved_bits) - (BITS_PER_SUBFRAME - 1), BITS_PER_SUBFRAME
+            0, len(unresolved_bits) - (_BITS_PER_SUBFRAME - 1), _BITS_PER_SUBFRAME
         ):
             if not np.array_equal(preamble, unresolved_bits[i : i + len(preamble)]):
                 return False
