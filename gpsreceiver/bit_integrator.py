@@ -4,9 +4,8 @@ from typing import Literal
 import numpy as np
 
 from .config import PREAMBLES_REQUIRED_TO_DETERMINE_BIT_PHASE
+from .constants import BITS_PER_SUBFRAME
 from .types import Bit, SatelliteId, UnresolvedBit
-
-_BITS_PER_SUBFRAME = 300
 
 # How many bits we must collect before we may attempt to determine the
 # boundaries between subframes and the overall bit phase.
@@ -17,7 +16,7 @@ _BITS_PER_SUBFRAME = 300
 # fewer than that. Add one to the constant to avoid this issue.
 _BITS_REQUIRED_TO_DETERMINE_BIT_PHASE = (
     PREAMBLES_REQUIRED_TO_DETERMINE_BIT_PHASE + 1
-) * _BITS_PER_SUBFRAME
+) * BITS_PER_SUBFRAME
 
 # The fixed TLM word preamble and its inverse.
 #
@@ -61,18 +60,18 @@ class BitIntegrator:
 
         # Group bits into subframes as long as we have enough data.
         while (
-            len(self._unresolved_bits) >= _BITS_PER_SUBFRAME
+            len(self._unresolved_bits) >= BITS_PER_SUBFRAME
             and self._bit_phase is not None
         ):
-            unresolved_bits = self._unresolved_bits[:_BITS_PER_SUBFRAME]
-            del self._unresolved_bits[:_BITS_PER_SUBFRAME]
+            unresolved_bits = self._unresolved_bits[:BITS_PER_SUBFRAME]
+            del self._unresolved_bits[:BITS_PER_SUBFRAME]
 
             bits = [self._resolve_bit(ub) for ub in unresolved_bits]
 
     def _determine_bit_phase(self) -> None:
         assert self._bit_phase is None, "The bit phase has already been determined"
 
-        for offset in range(_BITS_PER_SUBFRAME):
+        for offset in range(BITS_PER_SUBFRAME):
             unresolved_bits = self._unresolved_bits[offset:]
             determined = False
 
@@ -112,11 +111,11 @@ class BitIntegrator:
             unresolved_bits
         ), "The preamble must be equal or shorter in length than the unresolved bits"
         assert (
-            len(unresolved_bits) >= _BITS_PER_SUBFRAME
+            len(unresolved_bits) >= BITS_PER_SUBFRAME
         ), "Not enough unresolved bits for a subframe"
 
         for i in range(
-            0, len(unresolved_bits) - (_BITS_PER_SUBFRAME - 1), _BITS_PER_SUBFRAME
+            0, len(unresolved_bits) - (BITS_PER_SUBFRAME - 1), BITS_PER_SUBFRAME
         ):
             if not np.array_equal(preamble, unresolved_bits[i : i + len(preamble)]):
                 return False

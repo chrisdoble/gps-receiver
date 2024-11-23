@@ -1,3 +1,13 @@
+"""This module contains values that, at least in theory, could be changed to
+alter the receiver's behaviour. In practice, parts of the receiver may have been
+written in such a way that they won't work with other values, e.g.
+``SAMPLES_PER_MILLISECOND``. That's not to say it would never be possible to
+change them, just that it hasn't been tested and may not work at the moment.
+
+Values that are derived from these (e.g. ``SAMPLES_PER_SECOND`` is derived from
+``SAMPLES_PER_MILLISECOND``) should be defined in ``constants.py`` instead.
+"""
+
 import numpy as np
 
 from .types import SampleTimestampSeconds, SatelliteId
@@ -24,10 +34,6 @@ from .types import SampleTimestampSeconds, SatelliteId
 # C/A PRN code we can simply repeat each code chip twice to get a signal of the
 # same length. This avoids needing to e.g. pad the local replica with zeroes.
 SAMPLES_PER_MILLISECOND: int = 2046
-SAMPLES_PER_SECOND = SAMPLES_PER_MILLISECOND * 1000
-
-# The timestamp of each sample within a 1 ms sampling period.
-SAMPLE_TIMESTAMPS = np.arange(SAMPLES_PER_MILLISECOND) / SAMPLES_PER_SECOND
 
 # Acquisition
 
@@ -69,11 +75,6 @@ MS_OF_SAMPLES_REQUIRED_TO_PERFORM_ACQUISITION: int = 10
 # frequency shift, PRN code phase shift, etc.) are recorded to aide debugging
 # and graphing. This constant controls how many seconds of data are recorded.
 TRACKING_HISTORY_SIZE_SECONDS: SampleTimestampSeconds = 5
-
-# The number of values to be stored in each tracking history buffer.
-#
-# This assumes we recalculate tracking parameters once per millisecond.
-TRACKING_HISTORY_SIZE = int(TRACKING_HISTORY_SIZE_SECONDS * 1000)
 
 # The gain to use in the PRN code phase shift tracking loop.
 #

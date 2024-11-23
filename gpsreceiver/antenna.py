@@ -4,7 +4,8 @@ from pathlib import Path
 
 import numpy as np
 
-from .config import SAMPLES_PER_MILLISECOND, SAMPLES_PER_SECOND
+from .config import SAMPLES_PER_MILLISECOND
+from .constants import SAMPLES_PER_SECOND
 from .types import SampleTimestampSeconds
 
 
