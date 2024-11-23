@@ -6,6 +6,7 @@ import numpy as np
 from .bit_integrator import BitIntegrator
 from .config import BITS_REQUIRED_TO_DETECT_BOUNDARIES
 from .types import Pseudosymbol, SatelliteId, UnresolvedBit
+from .utils import invariant
 
 _PSEUDOSYMBOLS_PER_BIT = 20
 
@@ -81,7 +82,7 @@ class PseudosymbolIntegrator:
             self._bit_integrator.handle_unresolved_bit(unresolved_bit)
 
     def _synchronise(self) -> None:
-        assert not self._is_synchronised, "Synchronisation has already occured"
+        invariant(not self._is_synchronised, "Synchronisation has already occured")
 
         # Calculate a score for each possible offset.
         #

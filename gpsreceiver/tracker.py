@@ -13,6 +13,7 @@ from .config import (
 from .constants import SAMPLE_TIMESTAMPS, TRACKING_HISTORY_SIZE
 from .prn_codes import COMPLEX_UPSAMPLED_PRN_CODES_BY_SATELLITE_ID
 from .pseudosymbol_integrator import PseudosymbolIntegrator
+from .utils import invariant
 
 
 class Tracker:
@@ -91,7 +92,7 @@ class Tracker:
         """Returns the most recent estimate of the carrier wave's frequency
         shift in Hz."""
 
-        assert len(self._carrier_frequency_shifts) > 0
+        invariant(len(self._carrier_frequency_shifts) > 0)
         return self._carrier_frequency_shifts[-1]
 
     @property
@@ -99,7 +100,7 @@ class Tracker:
         """Returns the most recent estimate of the carrier wave's phase shift in
         radians."""
 
-        assert len(self._carrier_phase_shifts) > 0
+        invariant(len(self._carrier_phase_shifts) > 0)
         return self._carrier_phase_shifts[-1]
 
     def _track_prn_code_phase_shift(self, shifted_samples: np.ndarray) -> None:
@@ -154,7 +155,7 @@ class Tracker:
         """Returns the most recent estimate of the C/A PRN code's phase shift in
         half-chips."""
 
-        assert len(self._prn_code_phase_shifts) > 0
+        invariant(len(self._prn_code_phase_shifts) > 0)
         return self._prn_code_phase_shifts[-1]
 
     def _track_carrier(self, correlation: complex) -> None:

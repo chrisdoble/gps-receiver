@@ -4,6 +4,7 @@ from .acquirer import Acquirer
 from .antenna import Antenna
 from .pipeline import Pipeline
 from .types import SatelliteId
+from .utils import invariant
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +22,10 @@ class Receiver:
         )
 
         for acquisition in acquisitions:
-            assert (
-                acquisition.satellite_id not in self._pipelines_by_satellite_id
-            ), f"Received acquisition for already tracked satellite {acquisition.satellite_id}"
+            invariant(
+                acquisition.satellite_id not in self._pipelines_by_satellite_id,
+                f"Received acquisition for already tracked satellite {acquisition.satellite_id}",
+            )
 
             logger.info(
                 f"Acquired satellite {acquisition.satellite_id}:"

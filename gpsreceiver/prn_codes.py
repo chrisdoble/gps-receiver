@@ -15,6 +15,7 @@ import numpy as np
 
 from .config import SAMPLES_PER_MILLISECOND
 from .types import SatelliteId
+from .utils import invariant
 
 
 def _lfsr(outputs: list[int], taps: list[int]) -> Iterator[int]:
@@ -102,9 +103,10 @@ for satellite_id, outputs in _prn_code_outputs.items():
 #
 # This requires that SAMPLES_PER_MILLISECOND is an integer multiple of the
 # length of a C/A PRN code (1023). Raises an exception if that's not the case.
-assert (
-    SAMPLES_PER_MILLISECOND % len(PRN_CODES_BY_SATELLITE_ID[1]) == 0
-), "SAMPLES_PER_MILLISECOND isn't an integer multiple of the number of chips in a C/A PRN code (1023)"
+invariant(
+    SAMPLES_PER_MILLISECOND % len(PRN_CODES_BY_SATELLITE_ID[1]) == 0,
+    "SAMPLES_PER_MILLISECOND isn't an integer multiple of the number of chips in a C/A PRN code (1023)",
+)
 _repeat_count = SAMPLES_PER_MILLISECOND // len(PRN_CODES_BY_SATELLITE_ID[1])
 UPSAMPLED_PRN_CODES_BY_SATELLITE_ID = {
     satellite_id: np.repeat(prn_code, int(_repeat_count))

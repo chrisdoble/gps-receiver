@@ -6,6 +6,7 @@ import numpy as np
 from .config import PREAMBLES_REQUIRED_TO_DETERMINE_BIT_PHASE
 from .constants import BITS_PER_SUBFRAME
 from .types import Bit, SatelliteId, UnresolvedBit
+from .utils import invariant
 
 # How many bits we must collect before we may attempt to determine the
 # boundaries between subframes and the overall bit phase.
@@ -69,7 +70,7 @@ class BitIntegrator:
             bits = [self._resolve_bit(ub) for ub in unresolved_bits]
 
     def _determine_bit_phase(self) -> None:
-        assert self._bit_phase is None, "The bit phase has already been determined"
+        invariant(self._bit_phase is None, "The bit phase has already been determined")
 
         for offset in range(BITS_PER_SUBFRAME):
             unresolved_bits = self._unresolved_bits[offset:]
@@ -107,12 +108,14 @@ class BitIntegrator:
         If the length of ``unresolved_bits`` isn't an integer multiple of
         ``BITS_PER_SUBFRAME`` the leftover bits at the end are ignored.
         """
-        assert len(preamble) <= len(
-            unresolved_bits
-        ), "The preamble must be equal or shorter in length than the unresolved bits"
-        assert (
-            len(unresolved_bits) >= BITS_PER_SUBFRAME
-        ), "Not enough unresolved bits for a subframe"
+        invariant(
+            len(preamble) <= len(unresolved_bits),
+            "The preamble must be equal or shorter in length than the unresolved bits",
+        )
+        invariant(
+            len(unresolved_bits) >= BITS_PER_SUBFRAME,
+            "Not enough unresolved bits for a subframe",
+        )
 
         for i in range(
             0, len(unresolved_bits) - (BITS_PER_SUBFRAME - 1), BITS_PER_SUBFRAME
@@ -123,9 +126,10 @@ class BitIntegrator:
         return True
 
     def _resolve_bit(self, unresolved_bit: UnresolvedBit) -> Bit:
-        assert (
-            self._bit_phase is not None
-        ), "A bit can't be resolved until the bit phase is determined"
+        invariant(
+            self._bit_phase is not None,
+            "A bit can't be resolved until the bit phase is determined",
+        )
 
         if self._bit_phase == -1:
             return 1 if unresolved_bit == -1 else 0
