@@ -51,7 +51,7 @@ def _lfsr(outputs: list[int], taps: list[int]) -> Iterator[int]:
 #
 # Taken from Table 3-Ia in the GPS spec[1].
 #
-# 1: https://www.gps.gov/technical/icwg/IS-GPS-200L.pdf
+# 1: https://www.gps.gov/technical/icwg/IS-GPS-200M.pdf
 _prn_code_outputs: dict[SatelliteId, list[int]] = {
     1: [2, 6],
     2: [3, 7],
@@ -95,7 +95,7 @@ for satellite_id, outputs in _prn_code_outputs.items():
     g2 = _lfsr(outputs, [2, 3, 6, 8, 9, 10])
     prn_code = np.empty(1023, np.float32)
     for i in range(1023):
-        prn_code[i] = (next(g1) + next(g2)) % 2
+        prn_code[i] = next(g1) ^ next(g2)
     PRN_CODES_BY_SATELLITE_ID[satellite_id] = prn_code
 
 # The same C/A PRN codes as above, but upsampled so the number of chips in each

@@ -5,6 +5,7 @@ import numpy as np
 
 from .config import PREAMBLES_REQUIRED_TO_DETERMINE_BIT_PHASE
 from .constants import BITS_PER_SUBFRAME
+from .subframe_decoder import SubframeDecoder
 from .types import Bit, SatelliteId, UnresolvedBit
 from .utils import invariant
 
@@ -33,13 +34,18 @@ logger = logging.getLogger(__name__)
 class BitIntegrator:
     """Integrates bits into subframes.
 
-    Each subframe is 300 bits long and starts with a telemetry (TLM) word which
-    in turn starts with a preamble that's the same for every subframe. We can
-    use this preamble to find the boundaries between subframes and the overall
-    bit phase. The bits of each subframe are then forwarded in the pipeline.
+    Each subframe is 300 bits long and starts with a telemetry word which in
+    turn starts with a preamble that's the same for every subframe. We can use
+    this to find the boundaries between subframes and the overall bit phase.
+
+    This class takes ``UnresolvedBit``s from a ``PseudosymbolIntegrator``,
+    determines which groups of 300 bits should be considered a subframe, and
+    forwards the results to a ``SubframeDecoder``.
     """
 
-    def __init__(self, satellite_id: SatelliteId) -> None:
+    def __init__(
+        self, satellite_id: SatelliteId, subframe_decoder: SubframeDecoder
+    ) -> None:
         # The overall bit phase.
         #
         # ``None`` means we haven't determined the overall bit phase yet. ``-1``
@@ -47,6 +53,7 @@ class BitIntegrator:
         self._bit_phase: Literal[None, -1, 1] = None
 
         self._satellite_id = satellite_id
+        self._subframe_decoder = subframe_decoder
         self._unresolved_bits: list[UnresolvedBit] = []
 
     def handle_unresolved_bit(self, unresolved_bit: UnresolvedBit) -> None:
@@ -68,6 +75,7 @@ class BitIntegrator:
             del self._unresolved_bits[:BITS_PER_SUBFRAME]
 
             bits = [self._resolve_bit(ub) for ub in unresolved_bits]
+            self._subframe_decoder.handle_bits(bits)
 
     def _determine_bit_phase(self) -> None:
         invariant(self._bit_phase is None, "The bit phase has already been determined")

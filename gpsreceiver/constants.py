@@ -23,5 +23,5 @@ TRACKING_HISTORY_SIZE = int(TRACKING_HISTORY_SIZE_SECONDS * 1000)
 # Navigation data demodulation
 
 # The number of bits contained within a subframe of the navigation message.
-# Defined in section 20.3.2 of IS-GPS-200M.
+# Defined in section 20.3.2 of IS-GPS-200.
 BITS_PER_SUBFRAME = 300

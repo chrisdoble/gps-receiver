@@ -2,6 +2,7 @@ from .acquirer import Acquisition
 from .antenna import OneMsOfSamples
 from .bit_integrator import BitIntegrator
 from .pseudosymbol_integrator import PseudosymbolIntegrator
+from .subframe_decoder import SubframeDecoder
 from .tracker import Tracker
 
 
@@ -13,7 +14,8 @@ class Pipeline:
     """
 
     def __init__(self, acquisition: Acquisition) -> None:
-        bit_integrator = BitIntegrator(acquisition.satellite_id)
+        subframe_decoder = SubframeDecoder()
+        bit_integrator = BitIntegrator(acquisition.satellite_id, subframe_decoder)
         pseudosymbol_integrator = PseudosymbolIntegrator(
             bit_integrator, acquisition.satellite_id
         )
