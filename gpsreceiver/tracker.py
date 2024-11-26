@@ -14,13 +14,17 @@ from .constants import SAMPLE_TIMESTAMPS, TRACKING_HISTORY_SIZE
 from .prn_codes import COMPLEX_UPSAMPLED_PRN_CODES_BY_SATELLITE_ID
 from .pseudosymbol_integrator import PseudosymbolIntegrator
 from .utils import invariant
+from .world import World
 
 
 class Tracker:
     """Tracks a satellite's signal and decodes pseudosymbols."""
 
     def __init__(
-        self, acquisition: Acquisition, pseudosymbol_integrator: PseudosymbolIntegrator
+        self,
+        acquisition: Acquisition,
+        pseudosymbol_integrator: PseudosymbolIntegrator,
+        world: World,
     ) -> None:
         # The most recent estimates of the carrier's frequency shift in Hz.
         self._carrier_frequency_shifts = deque[float](
@@ -41,6 +45,8 @@ class Tracker:
             acquisition.satellite_id
         ]
 
+        self._prn_code_length = len(self._prn_code)
+
         # The most recent estimates of the PRN code's phase shift in half-chips.
         #
         # The values are floats because the delay-locked-loop that tracks the
@@ -51,6 +57,8 @@ class Tracker:
         )
 
         self._pseudosymbol_integrator = pseudosymbol_integrator
+        self._satellite_id = acquisition.satellite_id
+        self._world = world
 
     def handle_1ms_of_samples(self, samples: OneMsOfSamples) -> None:
         """Uses 1 ms of samples to determine the transmitted pseudosymbol and
@@ -66,7 +74,20 @@ class Tracker:
         )
 
         # Update the PRN code phase shift.
-        self._track_prn_code_phase_shift(shifted_samples)
+        prn_count_adjustment = self._track_prn_code_phase_shift(shifted_samples)
+
+        # Report the number of trailing edges of PRN codes we've observed in
+        # this 1 ms period (if any). Usually we observe one, but it's also
+        # possible to observe 0 or 2 if the PRN code phase shift has wrapped.
+        prn_count = 1 + prn_count_adjustment
+        if prn_count > 0:
+            self._world.handle_prn_codes(
+                prn_count,
+                self._satellite_id,
+                # Calculate the time of the trailing edge of the last PRN code.
+                samples.start_time
+                + self._prn_code_phase_shift / self._prn_code_length / 1000,
+            )
 
         # Calculate the correlation of the shifted samples and the prompt local
         # replica. If our estimates are good, multiplying the shifted samples by
@@ -103,8 +124,14 @@ class Tracker:
         invariant(len(self._carrier_phase_shifts) > 0)
         return self._carrier_phase_shifts[-1]
 
-    def _track_prn_code_phase_shift(self, shifted_samples: np.ndarray) -> None:
-        """Tracks the C/A PRN code's phase shift using a delay-locked loop."""
+    def _track_prn_code_phase_shift(self, shifted_samples: np.ndarray) -> int:
+        """Tracks the C/A PRN code's phase shift using a delay-locked loop.
+
+        Returns an integer in the range [-1, 1] indicating how this satellite's
+        observed PRN count should be adjusted. This is required because wrapping
+        of the PRN code phase shift from 0 to 2046 implies we've seen one extra
+        PRN code and wrapping from 2046 to 0 implies we've seen one fewer.
+        """
 
         # Generate replicas that are early and late by a half-chip.
         early = np.roll(self._prn_code, int(self._prn_code_phase_shift - 1))
@@ -147,8 +174,20 @@ class Tracker:
             - discriminator * PRN_CODE_PHASE_SHIFT_TRACKING_LOOP_GAIN
             - half_chips_due_to_doppler_effect
         )
-        prn_code_phase_shift %= len(self._prn_code)
+
+        # Ensure it's in the range [0, len(self._prn_code)). If it wraps, record
+        # the adjustment we must make to this satellite's observed PRN count.
+        prn_count_adjustment = 0
+
+        if prn_code_phase_shift < 0:
+            prn_code_phase_shift += self._prn_code_length
+            prn_count_adjustment = 1
+        elif prn_code_phase_shift >= self._prn_code_length:
+            prn_code_phase_shift -= self._prn_code_length
+            prn_count_adjustment = -1
+
         self._prn_code_phase_shifts.append(prn_code_phase_shift)
+        return prn_count_adjustment
 
     @property
     def _prn_code_phase_shift(self) -> float:

@@ -5,6 +5,7 @@ from .antenna import Antenna
 from .pipeline import Pipeline
 from .types import SatelliteId
 from .utils import invariant
+from .world import World
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +15,7 @@ class Receiver:
         self._acquirer = Acquirer()
         self._antenna = antenna
         self._pipelines_by_satellite_id: dict[SatelliteId, Pipeline] = {}
+        self._world = World()
 
     def step_1ms(self) -> None:
         samples = self._antenna.sample_1ms()
@@ -28,7 +30,7 @@ class Receiver:
             )
 
             logger.info(
-                f"Acquired satellite {acquisition.satellite_id}:"
+                f"[{acquisition.satellite_id}] Acquired:"
                 f" carrier_frequency_shift={acquisition.carrier_frequency_shift},"
                 f" carrier_phase_shift={acquisition.carrier_phase_shift},"
                 f" prn_code_phase_shift={acquisition.prn_code_phase_shift},"
@@ -36,7 +38,7 @@ class Receiver:
             )
 
             self._pipelines_by_satellite_id[acquisition.satellite_id] = Pipeline(
-                acquisition
+                acquisition, self._world
             )
 
         for pipeline in self._pipelines_by_satellite_id.values():

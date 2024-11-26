@@ -103,7 +103,7 @@ class BitIntegrator:
             if determined:
                 del self._unresolved_bits[:offset]
                 logger.info(
-                    f"Determined bit phase for satellite {self._satellite_id}: {self._bit_phase}"
+                    f"[{self._satellite_id}] Determined bit phase: {self._bit_phase}"
                 )
                 return
 

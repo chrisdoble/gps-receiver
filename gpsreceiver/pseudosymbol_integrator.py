@@ -103,7 +103,7 @@ class PseudosymbolIntegrator:
         best_offset = np.argmax(offset_scores)
         self._pseudosymbols = self._pseudosymbols[best_offset:]
 
-        logger.info(f"Performed bit synchronisation for satellite {self._satellite_id}")
+        logger.info(f"[{self._satellite_id}] Performed bit synchronisation")
         self._is_synchronised = True
 
 
