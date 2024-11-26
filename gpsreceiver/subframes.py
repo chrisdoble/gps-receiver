@@ -3,19 +3,6 @@ from typing import Literal
 
 from .types import Bit
 
-
-@dataclass
-class Telemetry:
-    """A telemetry (TLM) word.
-
-    See section 20.3.3.1 of IS-GPS-200 for more information.
-    """
-
-    # If ``True``, the probability of the error in the GPS signal exceeding its
-    # upper bound for more than 5.2 seconds is much lower than if ``False``.
-    integrity_status_flag: bool
-
-
 SubframeId = Literal[1, 2, 3, 4, 5]
 
 
@@ -36,18 +23,11 @@ class Handover:
     # transmit a subframe. Thus, the two LSBs aren't even necessary!
     tow_count_msbs: list[Bit]
 
-    # If ``True``, the error in the GPS signal may be worse than expected.
-    alert_flag: bool
-
-    # If ``True``, the satellite has anti-spoof mode enabled.
-    anti_spoof_flag: bool
-
     subframe_id: SubframeId
 
 
 @dataclass
 class Subframe:
-    telemetry: Telemetry
     handover: Handover
 
 
@@ -65,20 +45,11 @@ class Subframe1(Subframe):
     # See section 6.2.4 of IS-GPS-200 for more information.
     week_number_mod_1024: int
 
-    # Which codes are commanded on for the in-phase component of the L2 channel.
-    codes_on_l2_channel: list[Bit]
-
-    # An index that indicates the expected error in the GPS signal.
-    ura_index: int
-
     # A 6 bit field indicating the health of the satellite's navigation data.
     #
     # If the MSB is 0 the data is healthy, if it's 1 the data is unhealthy in
     # some way. The next 5 bits indicate the health of different components.
     sv_health: list[Bit]
-
-    issue_of_data_clock: list[Bit]
-    l2_p_data_flag: Bit
 
     # The L1-L2 correction term, in seconds.
     t_gd: float
@@ -103,8 +74,6 @@ class Subframe2(Subframe):
     See section 20.3.3.4 of IS-GPS-200 for more information.
     """
 
-    issue_of_data_ephemeris: list[Bit]
-
     # Amplitude of the sine harmonic correction term to the orbit radius, in
     # meters.
     c_rs: float
@@ -113,7 +82,7 @@ class Subframe2(Subframe):
     delta_n: float
 
     # Mean anomaly at reference time, in semi-circles.
-    m0: float
+    m_0: float
 
     # Amplitude of the cosine harmonic correction term to the argument of
     # latitude, in radians.
@@ -131,9 +100,6 @@ class Subframe2(Subframe):
 
     # Reference time ephemeris, in seconds.
     t_oe: float
-
-    fit_interval_flag: Bit
-    age_of_data_offset: list[Bit]
 
 
 @dataclass
@@ -168,10 +134,8 @@ class Subframe3(Subframe):
     # Rate of right ascension, in semi-circles/second.
     omega_dot: float
 
-    issue_of_data_ephemeris: list[Bit]
-
     # Rate of inclination angle, in semi-circles/second.
-    idot: float
+    i_dot: float
 
 
 @dataclass

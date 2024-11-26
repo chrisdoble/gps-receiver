@@ -11,7 +11,6 @@ from .subframes import (
     Subframe4,
     Subframe5,
     SubframeId,
-    Telemetry,
 )
 from .types import Bit, SatelliteId
 from .utils import InvariantError, invariant
@@ -58,29 +57,32 @@ class _SubframeDecoder:
         self._data = _decode_subframe_data(transmitted)
 
     def decode(self) -> Subframe:
-        telemetry = self._decode_telemetry()
-        handover = self._decode_handover()
+        self._decode_telemetry()
 
+        handover = self._decode_handover()
         match handover.subframe_id:
             case 1:
-                return self._decode_subframe_1(telemetry, handover)
+                return self._decode_subframe_1(handover)
 
             case 2:
-                return self._decode_subframe_2(telemetry, handover)
+                return self._decode_subframe_2(handover)
 
             case 3:
-                return self._decode_subframe_3(telemetry, handover)
+                return self._decode_subframe_3(handover)
 
             case 4:
-                return self._decode_subframe_4(telemetry, handover)
+                return self._decode_subframe_4(handover)
 
             case 5:
-                return self._decode_subframe_5(telemetry, handover)
+                return self._decode_subframe_5(handover)
 
             case _:
                 raise InvariantError(f"Invalid subframe ID: {handover.subframe_id}")
 
-    def _decode_telemetry(self) -> Telemetry:
+    def _decode_telemetry(self) -> None:
+        # We don't need anything from the TLM word so nothing is returned from
+        # this method, but we still need to parse it to move the cursor past.
+
         # The preamble is fixed.
         preamble = self._get_bits(8)
         invariant(preamble == [1, 0, 0, 0, 1, 0, 1, 1], "Invalid TLM preamble")
@@ -89,60 +91,67 @@ class _SubframeDecoder:
         # positioning service. We can't use that, so ignore it.
         self._skip_bits(14)
 
-        integrity_status_flag = self._get_bool()
+        # Integrity status flag.
+        self._get_bit()
 
         # The last data bit is reserved.
         self._skip_bits(1)
 
-        return Telemetry(integrity_status_flag)
-
     def _decode_handover(self) -> Handover:
         tow_count_msbs = self._get_bits(17)
-        alert_flag = self._get_bool()
-        anti_spoof_flag = self._get_bool()
+
+        # Alert flag.
+        self._get_bit()
+
+        # Anti-spoof flag.
+        self._get_bit()
 
         # A subframe ID may only be 1 through 5, inclusive.
         subframe_id = self._get_int(3)
         invariant(subframe_id in [1, 2, 3, 4, 5], f"Invalid subframe ID: {subframe_id}")
 
-        # Parity
+        # Parity bits.
         self._skip_bits(2)
 
-        return Handover(
-            tow_count_msbs, alert_flag, anti_spoof_flag, cast(SubframeId, subframe_id)
-        )
+        return Handover(tow_count_msbs, cast(SubframeId, subframe_id))
 
-    def _decode_subframe_1(self, telemetry: Telemetry, handover: Handover) -> Subframe1:
+    def _decode_subframe_1(self, handover: Handover) -> Subframe1:
         week_number_mod_1024 = self._get_int(10)
-        codes_on_l2_channel = self._get_bits(2)
-        ura_index = self._get_int(4)
-        sv_health = self._get_bits(6)
-        issue_of_data_clock_msbs = self._get_bits(2)
-        l2_p_data_flag = self._get_bit()
 
-        # Reserved
+        # Code(s) on L2 channel.
+        self._get_bits(2)
+
+        # URA index.
+        self._get_bits(4)
+
+        sv_health = self._get_bits(6)
+
+        # Issue of data, clock (IODC) MSBs.
+        self._get_bits(2)
+
+        # Data flag for L2 P-Code.
+        self._get_bit()
+
+        # Reserved.
         self._skip_bits(87)
 
         t_gd = self._get_float(8, -31, True)
-        issue_of_data_clock_lsbs = self._get_bits(8)
-        issue_of_data_clock = issue_of_data_clock_msbs + issue_of_data_clock_lsbs
+
+        # IODC LSBs.
+        self._get_bits(8)
+
         t_oc = self._get_float(16, 4, False)
         a_f2 = self._get_float(8, -55, True)
         a_f1 = self._get_float(16, -43, True)
         a_f0 = self._get_float(22, -31, True)
 
-        # Parity
+        # Parity bits.
         self._skip_bits(2)
 
         return Subframe1(
-            telemetry,
             handover,
             week_number_mod_1024,
-            codes_on_l2_channel,
-            ura_index,
             sv_health,
-            issue_of_data_clock,
-            l2_p_data_flag,
             t_gd,
             t_oc,
             a_f2,
@@ -150,39 +159,41 @@ class _SubframeDecoder:
             a_f0,
         )
 
-    def _decode_subframe_2(self, telemetry: Telemetry, handover: Handover) -> Subframe2:
-        issue_of_data_ephemeris = self._get_bits(8)
+    def _decode_subframe_2(self, handover: Handover) -> Subframe2:
+        # Issue of data (ephemeris).
+        self._get_bits(8)
+
         c_rs = self._get_float(16, -5, True)
         delta_n = self._get_float(16, -43, True)
-        m0 = self._get_float(32, -31, True)
+        m_0 = self._get_float(32, -31, True)
         c_uc = self._get_float(16, -29, True)
         e = self._get_float(32, -33, False)
         c_us = self._get_float(16, -29, True)
         sqrt_a = self._get_float(32, -19, False)
         t_oe = self._get_float(16, 4, False)
-        fit_interval_flag = self._get_bit()
-        age_of_data_offset = self._get_bits(5)
 
-        # Parity
+        # Fit interval flag.
+        self._get_bit()
+
+        # Age of data offset.
+        self._get_bits(5)
+
+        # Parity bits.
         self._skip_bits(2)
 
         return Subframe2(
-            telemetry,
             handover,
-            issue_of_data_ephemeris,
             c_rs,
             delta_n,
-            m0,
+            m_0,
             c_uc,
             e,
             c_us,
             sqrt_a,
             t_oe,
-            fit_interval_flag,
-            age_of_data_offset,
         )
 
-    def _decode_subframe_3(self, telemetry: Telemetry, handover: Handover) -> Subframe3:
+    def _decode_subframe_3(self, handover: Handover) -> Subframe3:
         c_ic = self._get_float(16, -29, True)
         omega_0 = self._get_float(32, -31, True)
         c_is = self._get_float(16, -29, True)
@@ -190,14 +201,16 @@ class _SubframeDecoder:
         c_rc = self._get_float(16, -5, True)
         omega = self._get_float(32, -31, True)
         omega_dot = self._get_float(24, -43, True)
-        issue_of_data_ephemeris = self._get_bits(8)
-        idot = self._get_float(14, -43, True)
 
-        # Parity
+        # Issue of data (ephemeris).
+        self._get_bits(8)
+
+        i_dot = self._get_float(14, -43, True)
+
+        # Parity bits.
         self._skip_bits(2)
 
         return Subframe3(
-            telemetry,
             handover,
             c_ic,
             omega_0,
@@ -206,17 +219,16 @@ class _SubframeDecoder:
             c_rc,
             omega,
             omega_dot,
-            issue_of_data_ephemeris,
-            idot,
+            i_dot,
         )
 
-    def _decode_subframe_4(self, telemetry: Telemetry, handover: Handover) -> Subframe4:
+    def _decode_subframe_4(self, handover: Handover) -> Subframe4:
         # We don't need anything from subframe 4 other than the TOW count.
-        return Subframe4(telemetry, handover)
+        return Subframe4(handover)
 
-    def _decode_subframe_5(self, telemetry: Telemetry, handover: Handover) -> Subframe5:
+    def _decode_subframe_5(self, handover: Handover) -> Subframe5:
         # We don't need anything from subframe 5 other than the TOW count.
-        return Subframe5(telemetry, handover)
+        return Subframe5(handover)
 
     def _get_bit(self) -> Bit:
         [bit] = self._get_bits(1)
