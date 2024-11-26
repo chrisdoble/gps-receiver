@@ -7,7 +7,7 @@ import numpy as np
 
 from .subframes import Subframe, Subframe1, Subframe2, Subframe3, Subframe4, Subframe5
 from .types import Bit, SampleTimestampSeconds, SatelliteId
-from .utils import InvariantError, invariant
+from .utils import InvariantError, invariant, parse_int_from_bits
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +79,11 @@ class PendingSatelliteParameters:
             t_gd=self.subframe_1.t_gd,
             t_oc=self.subframe_1.t_oc,
             t_oe=self.subframe_2.t_oe,
+            tow_count=max(
+                parse_int_from_bits(self.subframe_1.handover.tow_count_msbs),
+                parse_int_from_bits(self.subframe_2.handover.tow_count_msbs),
+                parse_int_from_bits(self.subframe_2.handover.tow_count_msbs),
+            ),
             week_number_mod_1024=self.subframe_1.week_number_mod_1024,
         )
 
@@ -117,19 +122,21 @@ class SatelliteParameters:
 
     # A 6 bit field indicating the health of the satellite's navigation data.
     #
-    # If the MSB is 0 the data is healthy, if it's 1 the data is unhealthy in
-    # some way. The next 5 bits indicate the health of different components.
+    # See ``Subframe1.sv_health`` for more information.
     sv_health: list[Bit]
 
     t_gd: float  # seconds
     t_oc: float  # seconds
     t_oe: float  # seconds
 
+    # The time-of-week (TOW) count at the leading edge of the next subframe.
+    #
+    # See ``Handover.tow_count_msbs`` for more information.
+    tow_count: int
+
     # The GPS week number mod 1024.
     #
-    # It's mod 1024 because only the 10 LSBs are transmitted.
-    #
-    # See section 6.2.4 of IS-GPS-200 for more information.
+    # See ``Subframe1.week_number_mod_1024`` for more information.
     week_number_mod_1024: int
 
     # The number of PRN code trailing edges that have been observed since the
@@ -137,12 +144,43 @@ class SatelliteParameters:
     prn_count: int = 0
 
     def handle_subframe(self, subframe: Subframe) -> None:
+        # Reset the number of PRN code trailing edges we've observed in the
+        # current subframe. It's intentional that we subtract the number of PRN
+        # codes per subframe rather than setting it to 0 to handle the cases
+        # where, due to Doppler shift, we observe 0 or 2 PRN code trailing edges
+        # in a 1 ms period. If we set it to 0 the PRN count would be off by 1
+        # which results in an error of ~300 km in the pseudorange.
+        self.prn_count -= 6000
+
+        self.tow_count = parse_int_from_bits(subframe.handover.tow_count_msbs)
+
+        # Multiplications by pi are converting semi-circles to radians.
         if isinstance(subframe, Subframe1):
-            pass
+            self.a_f0 = subframe.a_f0
+            self.a_f1 = subframe.a_f1
+            self.a_f2 = subframe.a_f2
+            self.sv_health = subframe.sv_health
+            self.t_gd = subframe.t_gd
+            self.t_oc = subframe.t_oc
+            self.week_number_mod_1024 = subframe.week_number_mod_1024
         elif isinstance(subframe, Subframe2):
-            pass
+            self.c_rs = subframe.c_rs
+            self.c_uc = subframe.c_uc
+            self.c_us = subframe.c_us
+            self.delta_n = subframe.delta_n * np.pi
+            self.e = subframe.e
+            self.m_0 = subframe.m_0 * np.pi
+            self.sqrt_a = subframe.sqrt_a
+            self.t_oe = subframe.t_oe
         elif isinstance(subframe, Subframe3):
-            pass
+            self.c_ic = subframe.c_ic
+            self.c_is = subframe.c_is
+            self.c_rc = subframe.c_rc
+            self.i_0 = subframe.i_0 * np.pi
+            self.i_dot = subframe.i_dot * np.pi
+            self.omega = subframe.omega * np.pi
+            self.omega_0 = subframe.omega_0 * np.pi
+            self.omega_dot = subframe.omega_dot * np.pi
         elif isinstance(subframe, Subframe4) or isinstance(subframe, Subframe5):
             # We don't need anything else from subframes 4 or 5.
             pass

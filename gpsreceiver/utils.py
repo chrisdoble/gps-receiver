@@ -1,3 +1,6 @@
+from .types import Bit
+
+
 class InvariantError(Exception):
     """An exception raised when an invariant condition is violated."""
 
@@ -12,3 +15,9 @@ def invariant(condition: bool, message: str = "") -> None:
     """
     if not condition:
         raise InvariantError(message)
+
+
+def parse_int_from_bits(bits: list[Bit]) -> int:
+    """Parses the given bits as an unsigned integer."""
+
+    return int("".join([str(b) for b in bits]), 2)

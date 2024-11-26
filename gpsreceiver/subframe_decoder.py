@@ -13,7 +13,7 @@ from .subframes import (
     SubframeId,
 )
 from .types import Bit, SatelliteId
-from .utils import InvariantError, invariant
+from .utils import InvariantError, invariant, parse_int_from_bits
 from .world import World
 
 _BITS_PER_WORD = 30
@@ -264,9 +264,7 @@ class _SubframeDecoder:
         return number * 2**scale_factor_exponent
 
     def _get_int(self, bit_count: int) -> int:
-        bits = self._get_bits(bit_count)
-        bit_string = "".join([str(b) for b in bits])
-        return int(bit_string, 2)
+        return parse_int_from_bits(self._get_bits(bit_count))
 
     def _skip_bits(self, bit_count: int) -> None:
         self._get_bits(bit_count)
