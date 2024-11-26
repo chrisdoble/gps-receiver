@@ -3,8 +3,10 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 
+import numpy as np
+
 from .subframes import Subframe, Subframe1, Subframe2, Subframe3, Subframe4, Subframe5
-from .types import SampleTimestampSeconds, SatelliteId
+from .types import Bit, SampleTimestampSeconds, SatelliteId
 from .utils import InvariantError, invariant
 
 logger = logging.getLogger(__name__)
@@ -52,10 +54,36 @@ class PendingSatelliteParameters:
         ):
             return None
 
-        return SatelliteParameters(self.last_prn_code_trailing_edge_timestamp)
+        # Multiplications by pi are converting semi-circles to radians.
+        return SatelliteParameters(
+            a_f0=self.subframe_1.a_f0,
+            a_f1=self.subframe_1.a_f1,
+            a_f2=self.subframe_1.a_f2,
+            c_ic=self.subframe_3.c_ic,
+            c_is=self.subframe_3.c_is,
+            c_rc=self.subframe_3.c_rc,
+            c_rs=self.subframe_2.c_rs,
+            c_uc=self.subframe_2.c_uc,
+            c_us=self.subframe_2.c_us,
+            delta_n=self.subframe_2.delta_n * np.pi,
+            e=self.subframe_2.e,
+            i_0=self.subframe_3.i_0 * np.pi,
+            i_dot=self.subframe_3.i_dot * np.pi,
+            last_prn_code_trailing_edge_timestamp=self.last_prn_code_trailing_edge_timestamp,
+            m_0=self.subframe_2.m_0 * np.pi,
+            omega=self.subframe_3.omega * np.pi,
+            omega_0=self.subframe_3.omega_0 * np.pi,
+            omega_dot=self.subframe_3.omega_dot * np.pi,
+            sqrt_a=self.subframe_2.sqrt_a,
+            sv_health=self.subframe_1.sv_health,
+            t_gd=self.subframe_1.t_gd,
+            t_oc=self.subframe_1.t_oc,
+            t_oe=self.subframe_2.t_oe,
+            week_number_mod_1024=self.subframe_1.week_number_mod_1024,
+        )
 
 
-@dataclass
+@dataclass(kw_only=True)
 class SatelliteParameters:
     """The information required for satellite calculations.
 
@@ -63,16 +91,52 @@ class SatelliteParameters:
     satellite. All properties are required which simplifies type checking.
     """
 
+    a_f0: float  # seconds
+    a_f1: float  # seconds/second
+    a_f2: float  # seconds/second^2
+    c_ic: float  # radians
+    c_is: float  # radians
+    c_rc: float  # meters
+    c_rs: float  # meters
+    c_uc: float  # radians
+    c_us: float  # radians
+    delta_n: float  # radians/second
+    e: float  # dimensionless
+    i_0: float  # radians
+    i_dot: float  # radians/second
+
     # The time at which the last PRN code trailing edge was observed.
     last_prn_code_trailing_edge_timestamp: SampleTimestampSeconds
+
+    m_0: float  # radians
+    omega: float  # radians
+    omega_0: float  # radians
+    omega_dot: float  # radians/second
+
+    sqrt_a: float  # √meters
+
+    # A 6 bit field indicating the health of the satellite's navigation data.
+    #
+    # If the MSB is 0 the data is healthy, if it's 1 the data is unhealthy in
+    # some way. The next 5 bits indicate the health of different components.
+    sv_health: list[Bit]
+
+    t_gd: float  # seconds
+    t_oc: float  # seconds
+    t_oe: float  # seconds
+
+    # The GPS week number mod 1024.
+    #
+    # It's mod 1024 because only the 10 LSBs are transmitted.
+    #
+    # See section 6.2.4 of IS-GPS-200 for more information.
+    week_number_mod_1024: int
 
     # The number of PRN code trailing edges that have been observed since the
     # start of the current subframe. Note that this may be negative.
     prn_count: int = 0
 
     def handle_subframe(self, subframe: Subframe) -> None:
-        # Store the TOW count.
-
         if isinstance(subframe, Subframe1):
             pass
         elif isinstance(subframe, Subframe2):
@@ -80,7 +144,7 @@ class SatelliteParameters:
         elif isinstance(subframe, Subframe3):
             pass
         elif isinstance(subframe, Subframe4) or isinstance(subframe, Subframe5):
-            # We only need the handover word from subframes 4 and 5.
+            # We don't need anything else from subframes 4 or 5.
             pass
         else:
             raise InvariantError(f"Unexpected subframe: {subframe}")
