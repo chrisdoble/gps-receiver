@@ -1,5 +1,6 @@
 import math
 from collections import deque
+from datetime import timedelta
 
 import numpy as np
 
@@ -10,7 +11,7 @@ from .config import (
     CARRIER_PHASE_SHIFT_TRACKING_LOOP_GAIN,
     PRN_CODE_PHASE_SHIFT_TRACKING_LOOP_GAIN,
 )
-from .constants import SAMPLE_TIMESTAMPS, TRACKING_HISTORY_SIZE
+from .constants import SAMPLE_TIMES, TRACKING_HISTORY_SIZE
 from .prn_codes import COMPLEX_UPSAMPLED_PRN_CODES_BY_SATELLITE_ID
 from .pseudosymbol_integrator import PseudosymbolIntegrator
 from .utils import invariant
@@ -68,7 +69,7 @@ class Tracker:
         shifted_samples = samples.samples * np.exp(
             -1j
             * (
-                2 * np.pi * self._carrier_frequency_shift * SAMPLE_TIMESTAMPS
+                2 * np.pi * self._carrier_frequency_shift * SAMPLE_TIMES
                 + self._carrier_phase_shift
             )
         )
@@ -85,8 +86,10 @@ class Tracker:
                 prn_count,
                 self._satellite_id,
                 # Calculate the time of the trailing edge of the last PRN code.
-                samples.start_time
-                + self._prn_code_phase_shift / self._prn_code_length / 1000,
+                samples.start_timestamp
+                + timedelta(
+                    seconds=self._prn_code_phase_shift / self._prn_code_length / 1000
+                ),
             )
 
         # Calculate the correlation of the shifted samples and the prompt local

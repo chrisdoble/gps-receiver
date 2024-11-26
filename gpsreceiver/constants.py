@@ -10,8 +10,8 @@ from .config import SAMPLES_PER_MILLISECOND, TRACKING_HISTORY_SIZE_SECONDS
 
 SAMPLES_PER_SECOND = SAMPLES_PER_MILLISECOND * 1000
 
-# The timestamp of each sample within a 1 ms sampling period.
-SAMPLE_TIMESTAMPS = np.arange(SAMPLES_PER_MILLISECOND) / SAMPLES_PER_SECOND
+# The time of each sample within a 1 ms sampling period (in seconds).
+SAMPLE_TIMES = np.arange(SAMPLES_PER_MILLISECOND) / SAMPLES_PER_SECOND
 
 # Tracking
 

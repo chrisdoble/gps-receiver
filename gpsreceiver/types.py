@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Literal
 
 # A bit.
@@ -15,15 +16,6 @@ Bit = Literal[0, 1]
 # don't know how they map until the overall phase of the signal is determined.
 Pseudosymbol = Literal[-1, 1]
 
-# A timestamp in "sample time", i.e. t = 0 s just before the first sample is
-# taken and t = 1 s just after config.SAMPLES_PER_SECOND have been taken.
-#
-# This definition is useful because the receiver's processing rate may be
-# different from the sampling rate (e.g. when reading samples from a file) but
-# we still want to time some actions relative to the samples rather than the
-# system clock (e.g. performing acquisition every x s).
-SampleTimestampSeconds = float
-
 # The ID of a GPS satellite based on its PRN number. This can be an integer
 # between 1 and 32 inclusive, but PRN number 1 is not currently in use[1].
 #
@@ -37,3 +29,8 @@ SatelliteId = int
 # that group, and emits the result. We can't call these navigation bits yet
 # because we haven't applied the bit phase. This is one of those values.
 UnresolvedBit = Literal[-1, 1]
+
+# A datetime in the UTC time zone.
+#
+# The time zone isn't enforced by this type, but the name is a helpful reminder.
+UtcTimestamp = datetime

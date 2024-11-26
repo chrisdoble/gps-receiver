@@ -1,19 +1,20 @@
 from collections import deque
 from dataclasses import dataclass
+from datetime import MINYEAR, datetime, timedelta, timezone
 
 import numpy as np
 
 from .antenna import OneMsOfSamples
 from .config import (
-    ACQUISITION_INTERVAL_SECONDS,
+    ACQUISITION_INTERVAL,
     ACQUISITION_STRENGTH_THRESHOLD,
     ALL_SATELLITE_IDS,
     MS_OF_SAMPLES_REQUIRED_TO_PERFORM_ACQUISITION,
     SAMPLES_PER_MILLISECOND,
 )
-from .constants import SAMPLE_TIMESTAMPS, SAMPLES_PER_SECOND
+from .constants import SAMPLE_TIMES, SAMPLES_PER_SECOND
 from .prn_codes import COMPLEX_UPSAMPLED_PRN_CODES_BY_SATELLITE_ID
-from .types import SampleTimestampSeconds, SatelliteId
+from .types import SatelliteId, UtcTimestamp
 
 
 @dataclass
@@ -52,7 +53,11 @@ class Acquirer:
     """Detects GPS satellite signals and determines their parameters."""
 
     def __init__(self) -> None:
-        self._acquisition_last_performed_at: SampleTimestampSeconds = 0
+        # Set to the minimum so we perform acquisition as soon as possible.
+        self._last_acquisition_timestamp: UtcTimestamp = datetime(
+            MINYEAR, 1, 1, tzinfo=timezone.utc
+        )
+
         self._samples = deque[OneMsOfSamples](
             maxlen=MS_OF_SAMPLES_REQUIRED_TO_PERFORM_ACQUISITION
         )
@@ -75,9 +80,8 @@ class Acquirer:
             return []
 
         if (
-            self._acquisition_last_performed_at > 0
-            and self._acquisition_last_performed_at + ACQUISITION_INTERVAL_SECONDS
-            > samples.end_time
+            self._last_acquisition_timestamp + ACQUISITION_INTERVAL
+            > samples.end_timestamp
         ):
             # It hasn't been long enough since we last attempted acquisition.
             return []
@@ -90,7 +94,7 @@ class Acquirer:
             if acquisition is not None:
                 acquisitions.append(acquisition)
 
-        self._acquisition_last_performed_at = samples.end_time
+        self._last_acquisition_timestamp = samples.end_timestamp
         return acquisitions
 
     def _acquire_satellite(self, satellite_id: SatelliteId) -> Acquisition | None:
@@ -153,6 +157,7 @@ class Acquirer:
         Returns the best acquisition result regardless of whether its strength
         exceeds the acquisition strength threshold.
         """
+
         # For each frequency shift we perform both coherent and non-coherent
         # integration for every 1 ms period of samples and add the results. This
         # strengthens weak signals as if the 1 ms period were extended, but
@@ -170,10 +175,10 @@ class Acquirer:
         magnitude_sums = np.zeros((len(frequency_shifts), len(prn_code)))
 
         for i, f in enumerate(frequency_shifts):
-            for samples in self._samples:
+            for j, samples in enumerate(self._samples):
                 # Perform carrier wipeoff.
                 shifted_samples = samples.samples * np.exp(
-                    -2j * np.pi * f * (SAMPLE_TIMESTAMPS + samples.start_time)
+                    -2j * np.pi * f * (SAMPLE_TIMES + j * 0.001)
                 )
 
                 correlation = np.fft.ifft(

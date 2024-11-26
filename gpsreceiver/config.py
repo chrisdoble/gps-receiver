@@ -8,9 +8,11 @@ Values that are derived from these (e.g. ``SAMPLES_PER_SECOND`` is derived from
 ``SAMPLES_PER_MILLISECOND``) should be defined in ``constants.py`` instead.
 """
 
+from datetime import timedelta
+
 import numpy as np
 
-from .types import SampleTimestampSeconds, SatelliteId
+from .types import SatelliteId
 
 # Sampling
 
@@ -37,11 +39,11 @@ SAMPLES_PER_MILLISECOND: int = 2046
 
 # Acquisition
 
-# The number of seconds between acquisition attempts.
+# The interval between acquisition attempts.
 #
 # This value was chosen experimentally to balance the frequency of attempting
 # acquisition and the computational cost of doing so.
-ACQUISITION_INTERVAL_SECONDS: SampleTimestampSeconds = 10
+ACQUISITION_INTERVAL: timedelta = timedelta(seconds=10)
 
 # An acquisition result must have a strength above this threshold in order to be
 # considered successful. Its strength is measured as the peak-to-mean ratio of
@@ -74,7 +76,7 @@ MS_OF_SAMPLES_REQUIRED_TO_PERFORM_ACQUISITION: int = 10
 # For each satellite, a buffer of the most recent tracking parameters (carrier
 # frequency shift, PRN code phase shift, etc.) are recorded to aide debugging
 # and graphing. This constant controls how many seconds of data are recorded.
-TRACKING_HISTORY_SIZE_SECONDS: SampleTimestampSeconds = 5
+TRACKING_HISTORY_SIZE_SECONDS: float = 5
 
 # The gain to use in the PRN code phase shift tracking loop.
 #

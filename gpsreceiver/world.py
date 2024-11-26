@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from .subframes import Subframe, Subframe1, Subframe2, Subframe3, Subframe4, Subframe5
-from .types import Bit, SampleTimestampSeconds, SatelliteId
+from .types import Bit, SatelliteId, UtcTimestamp
 from .utils import InvariantError, invariant, parse_int_from_bits
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,7 @@ class PendingSatelliteParameters:
     point it can be promoted into the (more type safe) ``SatelliteParameters``.
     """
 
-    last_prn_code_trailing_edge_timestamp: SampleTimestampSeconds | None = None
+    last_prn_code_trailing_edge_timestamp: UtcTimestamp | None = None
     subframe_1: Subframe1 | None = None
     subframe_2: Subframe2 | None = None
     subframe_3: Subframe3 | None = None
@@ -111,7 +111,7 @@ class SatelliteParameters:
     i_dot: float  # radians/second
 
     # The time at which the last PRN code trailing edge was observed.
-    last_prn_code_trailing_edge_timestamp: SampleTimestampSeconds
+    last_prn_code_trailing_edge_timestamp: UtcTimestamp
 
     m_0: float  # radians
     omega: float  # radians
@@ -204,7 +204,7 @@ class World:
         self,
         count: int,
         satellite_id: SatelliteId,
-        trailing_edge_timestamp: SampleTimestampSeconds,
+        trailing_edge_timestamp: UtcTimestamp,
     ) -> None:
         """Handle observation of the trailing edge of one or more PRN codes.
 
