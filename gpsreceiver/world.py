@@ -12,7 +12,7 @@ from .utils import InvariantError, invariant, parse_int_from_bits
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(kw_only=True)
 class PendingSatelliteParameters:
     """A subset of the information required for satellite calculations.
 

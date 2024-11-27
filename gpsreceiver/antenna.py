@@ -10,7 +10,7 @@ from .constants import SAMPLES_PER_SECOND
 from .types import UtcTimestamp
 
 
-@dataclass
+@dataclass(kw_only=True)
 class OneMsOfSamples:
     # The time just after the last sample was taken.
     end_timestamp: UtcTimestamp

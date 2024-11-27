@@ -17,7 +17,7 @@ from .prn_codes import COMPLEX_UPSAMPLED_PRN_CODES_BY_SATELLITE_ID
 from .types import SatelliteId, UtcTimestamp
 
 
-@dataclass
+@dataclass(kw_only=True)
 class Acquisition:
     """The parameters resulting from acquisition of a GPS satellite signal.
 
