@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import Enum
 from typing import Literal
 
 # A bit.
@@ -21,6 +22,17 @@ Pseudosymbol = Literal[-1, 1]
 #
 # 1: https://en.wikipedia.org/wiki/List_of_GPS_satellites#PRN_status_by_satellite_block
 SatelliteId = int
+
+
+class Side(Enum):
+    """A side of a chunk of samples."""
+
+    # The left side (earlier in time).
+    LEFT = 0
+
+    # The right side (later in time).
+    RIGHT = 1
+
 
 # A phase ambiguous bit emitted by a ``PseudosymbolIntegrator``.
 #

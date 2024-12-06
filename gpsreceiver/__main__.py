@@ -11,8 +11,8 @@ logging.basicConfig(
 
 receiver = Receiver(
     FileAntenna(
-        Path("data/nov_3_time_18_48_st_ives"),
-        datetime(2023, 11, 3, 18, 48, 0, 0, timezone.utc),
+        Path("data/samples-20241202T044931.3356330000"),
+        datetime(2024, 12, 2, 4, 49, 31, 335633, timezone.utc),
     )
 )
 

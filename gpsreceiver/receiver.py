@@ -1,11 +1,12 @@
 import logging
+import math
 
 from .acquirer import Acquirer
 from .antenna import Antenna
 from .pipeline import Pipeline
 from .types import SatelliteId
 from .utils import invariant
-from .world import World
+from .world import EcefCoordinates, World
 
 logger = logging.getLogger(__name__)
 
@@ -43,3 +44,44 @@ class Receiver:
 
         for pipeline in self._pipelines_by_satellite_id.values():
             pipeline.handle_1ms_of_samples(samples)
+
+        solution = self._world.compute_solution()
+        if solution is not None:
+            logger.info(
+                f"Found solution: {solution.clock_bias}, {_ecef_to_llh(solution.position)}"
+            )
+
+
+def _ecef_to_llh(ecef: EcefCoordinates) -> tuple[float, float, float]:
+    """Converts ECEF coordinates to latitude, longitude, height coordinates.
+
+    The latitude and longitude are in degrees, the height is in meters.
+
+    Uses Bowring's method[1].
+
+    1: https://en.wikipedia.org/wiki/Geographic_coordinate_conversion#Simple_iterative_conversion_for_latitude_and_height
+    """
+
+    # WGS 84 constants.
+    a = 6378137.0
+    b = 6356752.314245
+    e = math.sqrt(1 - (b / a) ** 2)
+
+    # Set h = 0 to get an initial latitude estimate.
+    p = math.sqrt(ecef.x**2 + ecef.y**2)
+    latitude = math.atan2(ecef.z, p * (1 - e**2))
+
+    # Iteratively calculate latitude.
+    for _ in range(5):
+        n = a / math.sqrt(1 - (e * math.sin(latitude)) ** 2)
+        height = p / math.cos(latitude) - n
+        latitude = math.atan2(ecef.z, p * (1 - e**2 * n / (n + height)))
+
+    longitude = math.atan2(ecef.y, ecef.x)
+
+    # Calculate height using the final latitude.
+    n = a / math.sqrt(1 - (e * math.sin(latitude)) ** 2)
+    height = p / math.cos(latitude) - n
+
+    # Convert to degrees.
+    return latitude / math.pi * 180, longitude / math.pi * 180, height

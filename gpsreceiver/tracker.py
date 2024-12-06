@@ -3,6 +3,7 @@ from collections import deque
 from datetime import timedelta
 
 import numpy as np
+from typing_extensions import assert_never
 
 from .acquirer import Acquisition
 from .antenna import OneMsOfSamples
@@ -14,6 +15,7 @@ from .config import (
 from .constants import SAMPLE_TIMES, TRACKING_HISTORY_SIZE
 from .prn_codes import COMPLEX_UPSAMPLED_PRN_CODES_BY_SATELLITE_ID
 from .pseudosymbol_integrator import PseudosymbolIntegrator
+from .types import Side
 from .utils import invariant
 from .world import World
 
@@ -59,6 +61,39 @@ class Tracker:
 
         self._pseudosymbol_integrator = pseudosymbol_integrator
         self._satellite_id = acquisition.satellite_id
+
+        # The PRN code phase shift is typically non-zero, i.e. PRN codes in the
+        # signal aren't aligned with the receiver's sample chunks. This means
+        # that each chunk contains the end of one PRN code (the "left" side of
+        # the chunk) followed by the start of another (the "right" side). The
+        # larger of the two determines the chunk's correlation with the local
+        # replica. Their sizes are determined by the PRN code phase shift.
+        #
+        # For example, in this diagram PRN code n + 1 is larger so it determines
+        # the chunk's correlation, which determines the pseudosymbol, etc.
+        #
+        #   Start of 1 ms chunk          End of 1 ms chunk
+        #                     ▼          ▼
+        #                     +---+------+
+        # End of PRN code n ▶ |   |      | ◀ Start of PRN code n + 1
+        #                     +---+------+
+        #                         ▲
+        #                         PRN code phase shift
+        #
+        # This attribute stores which side was larger on initialisation or after
+        # the last PRN code phase shift wrap (whichever happened last). We must
+        # track this because it affects PRN code counting, which affects time
+        # calculation. For example, if the right side is dominant at the end of
+        # a subframe we haven't seen the trailing edge of its last PRN code and
+        # thus we're not at the next subframe's TOW yet. If we increment the PRN
+        # count on receiving the next sample chunk (when we actually see the end
+        # of the previous subframe) we'll introduce a 1 ms (~300 km) error.
+        self._side = (
+            Side.LEFT
+            if self._prn_code_phase_shift > self._prn_code_length / 2
+            else Side.RIGHT
+        )
+
         self._world = world
 
     def handle_1ms_of_samples(self, samples: OneMsOfSamples) -> None:
@@ -75,22 +110,42 @@ class Tracker:
         )
 
         # Update the PRN code phase shift.
-        prn_count_adjustment = self._track_prn_code_phase_shift(shifted_samples)
+        #
+        # PRN code phase shift wrapping may impact ``PseudoSymbolIntegrator``
+        # synchronisation but I haven't though about it too much. If so, it will
+        # eventually produce rubbish bits, they will cause parity errors, the
+        # satellite will be dropped, then re-acquired, and all will be well.
+        wrap_side = self._track_prn_code_phase_shift(shifted_samples)
 
-        # Report the number of trailing edges of PRN codes we've observed in
-        # this 1 ms period (if any). Usually we observe one, but it's also
-        # possible to observe 0 or 2 if the PRN code phase shift has wrapped.
-        prn_count = 1 + prn_count_adjustment
-        if prn_count > 0:
-            self._world.handle_prn_codes(
-                prn_count,
-                self._satellite_id,
-                # Calculate the time of the trailing edge of the last PRN code.
-                samples.start_timestamp
-                + timedelta(
-                    seconds=self._prn_code_phase_shift / self._prn_code_length / 1000
-                ),
-            )
+        # Determine how many trailing edges of PRN codes we've observed in this
+        # 1 ms period (if any) and handle wrapping of the PRN code phase shift.
+        if wrap_side is None:
+            prn_count = 1
+        elif wrap_side == Side.LEFT:
+            # Wrapping past the left side means we've observed one additional
+            # trailing edge of a PRN code and the left side is now dominant.
+            prn_count = 2
+            self._side = Side.LEFT
+        elif wrap_side == Side.RIGHT:
+            # Wrapping past the right side means we've observed one fewer
+            # trailing edge of a PRN code and the right side is now dominant.
+            prn_count = 0
+            self._side = Side.RIGHT
+        else:
+            assert_never(wrap_side)
+
+        # Report the current side and the number of PRN codes that were observed
+        # to the ``World`` instance for use in its time calculations.
+        self._world.handle_prns_tracked(
+            prn_count,
+            self._satellite_id,
+            self._side,
+            # Calculate the time of the trailing edge of the last PRN code.
+            samples.start_timestamp
+            + timedelta(
+                seconds=self._prn_code_phase_shift / self._prn_code_length / 1000
+            ),
+        )
 
         # Calculate the correlation of the shifted samples and the prompt local
         # replica. If our estimates are good, multiplying the shifted samples by
@@ -127,13 +182,14 @@ class Tracker:
         invariant(len(self._carrier_phase_shifts) > 0)
         return self._carrier_phase_shifts[-1]
 
-    def _track_prn_code_phase_shift(self, shifted_samples: np.ndarray) -> int:
+    def _track_prn_code_phase_shift(self, shifted_samples: np.ndarray) -> Side | None:
         """Tracks the C/A PRN code's phase shift using a delay-locked loop.
 
-        Returns an integer in the range [-1, 1] indicating how this satellite's
-        observed PRN count should be adjusted. This is required because wrapping
-        of the PRN code phase shift from 0 to 2046 implies we've seen one extra
-        PRN code and wrapping from 2046 to 0 implies we've seen one fewer.
+        Returns the side over which the phase shift wrapped (if any). For
+        example, if it becomes negative (moves past the "left" side) the PRN
+        length is added to wrap it (to the "right" side). This is required
+        because wrapping from the left to the right means we've seen one extra
+        PRN code and the opposite means we've seen one fewer.
         """
 
         # Generate replicas that are early and late by a half-chip.
@@ -178,19 +234,19 @@ class Tracker:
             - half_chips_due_to_doppler_effect
         )
 
-        # Ensure it's in the range [0, len(self._prn_code)). If it wraps, record
-        # the adjustment we must make to this satellite's observed PRN count.
-        prn_count_adjustment = 0
+        # If it wraps, record over which side.
+        wrap_side: Side | None = None
 
         if prn_code_phase_shift < 0:
             prn_code_phase_shift += self._prn_code_length
             prn_count_adjustment = 1
+            wrap_side = Side.LEFT
         elif prn_code_phase_shift >= self._prn_code_length:
             prn_code_phase_shift -= self._prn_code_length
-            prn_count_adjustment = -1
+            wrap_side = Side.RIGHT
 
         self._prn_code_phase_shifts.append(prn_code_phase_shift)
-        return prn_count_adjustment
+        return wrap_side
 
     @property
     def _prn_code_phase_shift(self) -> float:
