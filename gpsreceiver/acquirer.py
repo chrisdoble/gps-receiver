@@ -102,6 +102,7 @@ class Acquirer:
 
         Returns an acquisition if it is strong enough, otherwise returns None.
         """
+
         # The following attempts to acquire the satellite's signal at a fixed
         # number of frequency shifts in a range around a central value. The
         # central value is updated to be the frequency shift of the strongest
@@ -152,7 +153,7 @@ class Acquirer:
         self, frequency_shifts: np.ndarray, satellite_id: SatelliteId
     ) -> Acquisition:
         """Attempts to acquire the signal of a particular GPS satellite at
-            particular frequency shifts.
+        particular frequency shifts.
 
         Returns the best acquisition result regardless of whether its strength
         exceeds the acquisition strength threshold.

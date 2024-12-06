@@ -116,7 +116,8 @@ class _SubframeDecoder:
         return Handover(tow_count_msbs, cast(SubframeId, subframe_id))
 
     def _decode_subframe_1(self, handover: Handover) -> Subframe1:
-        week_number_mod_1024 = self._get_int(10)
+        # GPS week number mod 1024.
+        self._get_int(10)
 
         # Code(s) on L2 channel.
         self._get_bits(2)
@@ -150,7 +151,6 @@ class _SubframeDecoder:
 
         return Subframe1(
             handover,
-            week_number_mod_1024,
             sv_health,
             t_gd,
             t_oc,

@@ -38,13 +38,6 @@ class Subframe1(Subframe):
     See section 20.3.3.3 of IS-GPS-200 for more information.
     """
 
-    # The GPS week number mod 1024.
-    #
-    # It's mod 1024 because only the 10 LSBs are transmitted.
-    #
-    # See section 6.2.4 of IS-GPS-200 for more information.
-    week_number_mod_1024: int
-
     # A 6 bit field indicating the health of the satellite's navigation data.
     #
     # If the MSB is 0 the data is healthy, if it's 1 the data is unhealthy in

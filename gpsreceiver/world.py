@@ -99,7 +99,6 @@ class PendingSatelliteParameters:
             t_oc=self.subframe_1.t_oc,
             t_oe=self.subframe_2.t_oe,
             tow_count=self.tow_count,
-            week_number_mod_1024=self.subframe_1.week_number_mod_1024,
         )
 
 
@@ -157,11 +156,6 @@ class SatelliteParameters:
     # See ``Handover.tow_count_msbs`` for more information.
     tow_count: int
 
-    # The GPS week number mod 1024.
-    #
-    # See ``Subframe1.week_number_mod_1024`` for more information.
-    week_number_mod_1024: int
-
     def handle_subframe(self, subframe: Subframe) -> None:
         # Reset the number of PRN code trailing edges we've observed in the
         # current subframe. It's intentional that we subtract the number of PRN
@@ -181,7 +175,6 @@ class SatelliteParameters:
             self.sv_health = subframe.sv_health
             self.t_gd = subframe.t_gd
             self.t_oc = subframe.t_oc
-            self.week_number_mod_1024 = subframe.week_number_mod_1024
         elif isinstance(subframe, Subframe2):
             self.c_rs = subframe.c_rs
             self.c_uc = subframe.c_uc

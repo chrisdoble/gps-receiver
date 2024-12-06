@@ -263,12 +263,13 @@ class Tracker:
         ``correlation`` is the correlation between the (post wipeoff) received
         signal and the prompt local replica of the PRN code.
         """
+
         # The received signal can be expressed as
         # n(t) * prn_code(t) * exp(2 π ((f + Δf) t + θ)) where n(t) = ±1 is the
         # navigation bit at time t, prn_code(t) = ±1 is the PRN code chip at
         # time t, exp(...) is the exponential function, f is the L1 frequency
         # 1.56542 GHz, Δf is the signal's frequency shift due to the Doppler
-        # effect, and θ is the phase of the carrier wave.
+        # effect, and θ is the phase shift of the carrier wave.
         #
         # If we undersample the antenna such that the L1 frequency is aliased at
         # 0 Hz, f disappears from this expression leaving

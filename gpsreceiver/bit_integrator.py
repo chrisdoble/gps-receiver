@@ -93,8 +93,7 @@ class BitIntegrator:
             if self._all_subframes_start_with_preamble(_TLM_PREAMBLE, unresolved_bits):
                 determined = True
                 self._bit_phase = 1
-
-            if self._all_subframes_start_with_preamble(
+            elif self._all_subframes_start_with_preamble(
                 _INVERSE_TLM_PREAMBLE, unresolved_bits
             ):
                 determined = True
