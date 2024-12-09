@@ -1,6 +1,11 @@
+import time
+from abc import ABC, abstractmethod
 from collections import deque
 from dataclasses import dataclass
 from datetime import MINYEAR, datetime, timedelta, timezone
+from multiprocessing import Pipe, Process
+from multiprocessing.connection import Connection
+from typing import cast
 
 import numpy as np
 
@@ -15,6 +20,7 @@ from .config import (
 from .constants import SAMPLE_TIMES, SAMPLES_PER_SECOND
 from .prn_codes import COMPLEX_UPSAMPLED_PRN_CODES_BY_SATELLITE_ID
 from .types import SatelliteId, UtcTimestamp
+from .utils import InvariantError, invariant
 
 
 @dataclass(kw_only=True)
@@ -49,164 +55,276 @@ class Acquisition:
     strength: float
 
 
-class Acquirer:
-    """Detects GPS satellite signals and determines their parameters."""
+class Acquirer(ABC):
+    """Detects GPS satellite signals and determines their parameters.
+
+    This is abstract so subclasses can decide how to schedule computations, e.g.
+    whether they should block the main process or occur in a subprocess.
+    """
 
     def __init__(self) -> None:
-        # Set to the minimum so we perform acquisition as soon as possible.
-        self._last_acquisition_timestamp: UtcTimestamp = datetime(
-            MINYEAR, 1, 1, tzinfo=timezone.utc
-        )
+        # When to next attempt acquisition for each satellite, in receiver time.
+        #
+        # Set to the minimum value so we perform acquisition on startup.
+        self._next_acquisition_timestamp_by_satellite_id: dict[
+            SatelliteId, UtcTimestamp
+        ] = {i: datetime(MINYEAR, 1, 1, tzinfo=timezone.utc) for i in ALL_SATELLITE_IDS}
 
+        # The most recently received samples.
         self._samples = deque[OneMsOfSamples](
             maxlen=MS_OF_SAMPLES_REQUIRED_TO_PERFORM_ACQUISITION
         )
 
+        # The most recently received set of tracked satellite IDs.
+        self._tracked_satellite_ids: set[SatelliteId] = set()
+
     def handle_1ms_of_samples(
         self, samples: OneMsOfSamples, tracked_satellite_ids: set[SatelliteId]
-    ) -> list[Acquisition]:
-        """Handle 1 ms of samples.
+    ) -> Acquisition | None:
+        """Handles 1 ms of samples.
 
-        This may simply store the samples for future use or it could result in
-        attempting acquisition of satellites that aren't already being tracked
-        (as determined by ``tracked_satellite_ids``) depending on how many ms of
-        samples we've already collected and when we last attempted acquisition.
+        Returns an ``Acquisition`` if a satellite's signal has been acquired.
         """
 
         self._samples.append(samples)
+        self._tracked_satellite_ids = tracked_satellite_ids
 
+        # Check if we have enough samples to perform acquisition.
         if len(self._samples) < MS_OF_SAMPLES_REQUIRED_TO_PERFORM_ACQUISITION:
-            # We don't have enough samples to perform acquisition.
-            return []
-
-        if (
-            self._last_acquisition_timestamp + ACQUISITION_INTERVAL
-            > samples.end_timestamp
-        ):
-            # It hasn't been long enough since we last attempted acquisition.
-            return []
-
-        acquisitions = []
-        untracked_satellite_ids = ALL_SATELLITE_IDS - tracked_satellite_ids
-
-        for satellite_id in untracked_satellite_ids:
-            acquisition = self._acquire_satellite(satellite_id)
-            if acquisition is not None:
-                acquisitions.append(acquisition)
-
-        self._last_acquisition_timestamp = samples.end_timestamp
-        return acquisitions
-
-    def _acquire_satellite(self, satellite_id: SatelliteId) -> Acquisition | None:
-        """Attempts to acquire the signal of a particular GPS satellite.
-
-        Returns an acquisition if it is strong enough, otherwise returns None.
-        """
-
-        # The following attempts to acquire the satellite's signal at a fixed
-        # number of frequency shifts in a range around a central value. The
-        # central value is updated to be the frequency shift of the strongest
-        # candidate, the range is reduced, and the process is repeated until
-        # we're searching a continuous range. This means we start by searching a
-        # large range and gradually narrow down on the most promising regions.
-        #
-        # The initial central value is 0 and the initial frequency shift range
-        # is ±7.168 kHz. This range was chosen to accommodate all reasonable
-        # receiver and satellite motion, receiver oscillation variance, etc. On
-        # each iteration the range is split into 29 equally-spaced values
-        # (including endpoints) and is reduced by a factor of two. This means on
-        # the first iteration the step size is 512 Hz, the second it's 256 Hz,
-        # etc., until the tenth iteration where it's 1 Hz and we're searching a
-        # continuous range. At that point we've found the strongest candidate.
-        best_acquisition: Acquisition | None = None
-        centre_frequency_shift: float = 0
-        half_frequency_shift_range: float = 7_168
-
-        while half_frequency_shift_range >= 14:
-            new_acquisition = self._acquire_satellite_at_frequency_shifts(
-                np.linspace(
-                    centre_frequency_shift - half_frequency_shift_range,
-                    centre_frequency_shift + half_frequency_shift_range,
-                    29,
-                ),
-                satellite_id,
-            )
-
-            if (
-                best_acquisition is None
-                or new_acquisition.strength > best_acquisition.strength
-            ):
-                best_acquisition = new_acquisition
-
-            centre_frequency_shift = best_acquisition.carrier_frequency_shift
-            half_frequency_shift_range /= 2
-
-        if (
-            best_acquisition is not None
-            and best_acquisition.strength >= ACQUISITION_STRENGTH_THRESHOLD
-        ):
-            return best_acquisition
-        else:
             return None
 
-    def _acquire_satellite_at_frequency_shifts(
-        self, frequency_shifts: np.ndarray, satellite_id: SatelliteId
-    ) -> Acquisition:
-        """Attempts to acquire the signal of a particular GPS satellite at
-        particular frequency shifts.
+        acquisition = self._get_acquisition()
+        if acquisition is not None:
+            self._next_acquisition_timestamp_by_satellite_id[
+                acquisition.satellite_id
+            ] = (samples.end_timestamp + ACQUISITION_INTERVAL)
 
-        Returns the best acquisition result regardless of whether its strength
-        exceeds the acquisition strength threshold.
-        """
+            if acquisition.strength >= ACQUISITION_STRENGTH_THRESHOLD:
+                return acquisition
 
-        # For each frequency shift we perform both coherent and non-coherent
-        # integration for every 1 ms period of samples and add the results. This
-        # strengthens weak signals as if the 1 ms period were extended, but
-        # minimises the issue of navigation bit changes affecting the magnitude
-        # of the correlation. We then find the frequency shift and PRN code
-        # phase that give the greatest non-coherent sum - this is the strongest
-        # signal. The argument of the corresponding coherent sum is an estimate
-        # of the phase of the carrier wave. Finally, the peak-to-mean ratio of
-        # all correlations for the strongest frequency shift gives the strength.
+        return None
 
-        prn_code = COMPLEX_UPSAMPLED_PRN_CODES_BY_SATELLITE_ID[satellite_id]
-        prn_code_fft_conj = np.conj(np.fft.fft(prn_code))
+    @abstractmethod
+    def _get_acquisition(self) -> Acquisition | None:
+        """Returns an ``Acquisition``, if one is ready."""
 
-        coherent_sums = np.zeros((len(frequency_shifts), len(prn_code)), dtype=complex)
-        magnitude_sums = np.zeros((len(frequency_shifts), len(prn_code)))
+        pass
 
-        for i, f in enumerate(frequency_shifts):
-            for j, samples in enumerate(self._samples):
-                # Perform carrier wipeoff.
-                shifted_samples = samples.samples * np.exp(
-                    -2j * np.pi * f * (SAMPLE_TIMES + j * 0.001)
+    def _get_next_acquisition_target(self) -> SatelliteId | None:
+        """Determines which satellite we should attempt to acquire next."""
+
+        now = self._samples[-1].end_timestamp
+        untracked_satellite_ids = ALL_SATELLITE_IDS - self._tracked_satellite_ids
+        candidates = [
+            (si, t)
+            for si, t in self._next_acquisition_timestamp_by_satellite_id.items()
+            if si in untracked_satellite_ids and t <= now
+        ]
+        candidates.sort(key=lambda c: c[1])
+
+        if len(candidates) > 0:
+            return candidates[0][0]
+
+        return None
+
+
+class MainProcessAcquirer(Acquirer):
+    """An ``Acquirer`` that performs computations in the main process.
+
+    To be used when sampling a recorded signal, otherwise the receiver churns
+    through all of the recorded samples before acquisition is complete.
+    """
+
+    def _get_acquisition(self) -> Acquisition | None:
+        satellite_id = self._get_next_acquisition_target()
+        if satellite_id is not None:
+            return _acquire_satellite(list(self._samples), satellite_id)
+
+        return None
+
+
+class SubprocessAcquirer(Acquirer):
+    """An ``Acquirer`` that performs computations in a subprocess.
+
+    To be used when sampling a real-time signal, otherwise there will be periods
+    where we don't sample because the computations block the main process.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+
+        # The connections through which the processes communicate.
+        self._connection, connection = Pipe()
+
+        # The subprocess.
+        #
+        # Marked as a daemon so it's killed alongside the main process.
+        self._process = Process(
+            args=(connection,),
+            daemon=True,
+            target=_run_subprocess,
+        )
+        self._process.start()
+
+        # Whether we're waiting for the subprocess to return an ``Acquisition``.
+        self._waiting = False
+
+    def _get_acquisition(self) -> Acquisition | None:
+        invariant(self._process.is_alive(), "Acquisition subprocess has terminated")
+
+        if self._waiting:
+            if self._connection.poll():
+                result = self._connection.recv()
+                invariant(
+                    isinstance(result, Acquisition),
+                    f"Invalid value received from acquisition subprocess: {result}",
                 )
+                self._waiting = False
+                return result
+        else:
+            satellite_id = self._get_next_acquisition_target()
+            if satellite_id is not None:
+                self._connection.send((list(self._samples), satellite_id))
+                self._waiting = True
 
-                correlation = np.fft.ifft(
-                    np.fft.fft(shifted_samples) * prn_code_fft_conj
-                )
+        return None
 
-                coherent_sums[i] += correlation
-                magnitude_sums[i] += np.abs(correlation)
 
-        frequency_shift_index, prn_code_phase = np.unravel_index(
-            np.argmax(magnitude_sums), magnitude_sums.shape
+def _run_subprocess(connection: Connection) -> None:
+    while True:
+        # If we haven't received any arguments from the main process, sleep.
+        if not connection.poll():
+            time.sleep(0.001)
+            continue
+
+        args = connection.recv()
+        invariant(
+            isinstance(args, tuple) and len(args) == 2,
+            f"Invalid arguments sent to acquisition subprocess: {args}",
         )
 
-        peak_correlation = magnitude_sums[frequency_shift_index, prn_code_phase]
-        mean_correlation = np.mean(
-            magnitude_sums[
-                frequency_shift_index,
-                magnitude_sums[frequency_shift_index] != peak_correlation,
-            ]
+        samples, satellite_id = args
+        invariant(
+            isinstance(samples, list)
+            and all([isinstance(s, OneMsOfSamples) for s in samples]),
+            f"Invalid samples sent to acquisition subprocess: {samples}",
+        )
+        invariant(
+            isinstance(satellite_id, int),
+            f"Invalid satellite ID send to acquisition subprocess: {satellite_id}",
         )
 
-        return Acquisition(
-            carrier_frequency_shift=frequency_shifts[frequency_shift_index],
-            carrier_phase_shift=np.angle(
-                coherent_sums[frequency_shift_index, prn_code_phase]
+        connection.send(_acquire_satellite(samples, satellite_id))
+
+
+def _acquire_satellite(
+    samples: list[OneMsOfSamples], satellite_id: SatelliteId
+) -> Acquisition:
+    """Attempts to acquire the signal of a particular GPS satellite."""
+
+    # The following attempts to acquire the satellite's signal at a fixed
+    # number of frequency shifts in a range around a central value. The
+    # central value is updated to be the frequency shift of the strongest
+    # candidate, the range is reduced, and the process is repeated until
+    # we're searching a continuous range. This means we start by searching a
+    # large range and gradually narrow down on the most promising regions.
+    #
+    # The initial central value is 0 and the initial frequency shift range
+    # is ±7.168 kHz. This range was chosen to accommodate all reasonable
+    # receiver and satellite motion, receiver oscillation variance, etc. On
+    # each iteration the range is split into 29 equally-spaced values
+    # (including endpoints) and is reduced by a factor of two. This means on
+    # the first iteration the step size is 512 Hz, the second it's 256 Hz,
+    # etc., until the tenth iteration where it's 1 Hz and we're searching a
+    # continuous range. At that point we've found the strongest candidate.
+    best_acquisition: Acquisition | None = None
+    centre_frequency_shift: float = 0
+    half_frequency_shift_range: float = 7_168
+
+    while half_frequency_shift_range >= 14:
+        new_acquisition = _acquire_satellite_at_frequency_shifts(
+            np.linspace(
+                centre_frequency_shift - half_frequency_shift_range,
+                centre_frequency_shift + half_frequency_shift_range,
+                29,
             ),
-            prn_code_phase_shift=int(prn_code_phase),
-            satellite_id=satellite_id,
-            strength=peak_correlation / mean_correlation,
+            samples,
+            satellite_id,
         )
+
+        if (
+            best_acquisition is None
+            or new_acquisition.strength > best_acquisition.strength
+        ):
+            best_acquisition = new_acquisition
+
+        centre_frequency_shift = best_acquisition.carrier_frequency_shift
+        half_frequency_shift_range /= 2
+
+    if best_acquisition is None:
+        raise InvariantError("Missing acquisition result")
+
+    return best_acquisition
+
+
+def _acquire_satellite_at_frequency_shifts(
+    frequency_shifts: np.ndarray,
+    samples: list[OneMsOfSamples],
+    satellite_id: SatelliteId,
+) -> Acquisition:
+    """Attempts to acquire the signal of a particular GPS satellite at
+    particular frequency shifts.
+
+    Returns the best acquisition result regardless of whether its strength
+    exceeds the acquisition strength threshold.
+    """
+
+    # For each frequency shift we perform both coherent and non-coherent
+    # integration for every 1 ms period of samples and add the results. This
+    # strengthens weak signals as if the 1 ms period were extended, but
+    # minimises the issue of navigation bit changes affecting the magnitude
+    # of the correlation. We then find the frequency shift and PRN code
+    # phase that give the greatest non-coherent sum - this is the strongest
+    # signal. The argument of the corresponding coherent sum is an estimate
+    # of the phase of the carrier wave. Finally, the peak-to-mean ratio of
+    # all correlations for the strongest frequency shift gives the strength.
+
+    prn_code = COMPLEX_UPSAMPLED_PRN_CODES_BY_SATELLITE_ID[satellite_id]
+    prn_code_fft_conj = np.conj(np.fft.fft(prn_code))
+
+    coherent_sums = np.zeros((len(frequency_shifts), len(prn_code)), dtype=complex)
+    magnitude_sums = np.zeros((len(frequency_shifts), len(prn_code)))
+
+    for i, f in enumerate(frequency_shifts):
+        for j, samples_i in enumerate(samples):
+            # Perform carrier wipeoff.
+            shifted_samples = samples_i.samples * np.exp(
+                -2j * np.pi * f * (SAMPLE_TIMES + j * 0.001)
+            )
+
+            correlation = np.fft.ifft(np.fft.fft(shifted_samples) * prn_code_fft_conj)
+
+            coherent_sums[i] += correlation
+            magnitude_sums[i] += np.abs(correlation)
+
+    frequency_shift_index, prn_code_phase = np.unravel_index(
+        np.argmax(magnitude_sums), magnitude_sums.shape
+    )
+
+    peak_correlation = magnitude_sums[frequency_shift_index, prn_code_phase]
+    mean_correlation = np.mean(
+        magnitude_sums[
+            frequency_shift_index,
+            magnitude_sums[frequency_shift_index] != peak_correlation,
+        ]
+    )
+
+    return Acquisition(
+        carrier_frequency_shift=frequency_shifts[frequency_shift_index],
+        carrier_phase_shift=np.angle(
+            coherent_sums[frequency_shift_index, prn_code_phase]
+        ),
+        prn_code_phase_shift=int(prn_code_phase),
+        satellite_id=satellite_id,
+        strength=peak_correlation / mean_correlation,
+    )
