@@ -474,6 +474,18 @@ class World:
             ]
         )
 
+    def drop_satellite(self, satellite_id: SatelliteId) -> None:
+        """Remove a satellite from the world model.
+
+        This is called when we lose lock on a satellite.
+        """
+
+        if satellite_id in self._pending_satellite_parameters:
+            del self._pending_satellite_parameters[satellite_id]
+
+        if satellite_id in self._satellite_parameters:
+            del self._satellite_parameters[satellite_id]
+
     def handle_prns_tracked(
         self,
         count: int,
@@ -560,15 +572,3 @@ class World:
             logger.info(f"[{satellite_id}] Promoted pending parameters")
             self._satellite_parameters[satellite_id] = sp
             del self._pending_satellite_parameters[satellite_id]
-
-    def remove_satellite(self, satellite_id: SatelliteId) -> None:
-        """Remove a satellite.
-
-        This is called when we lose lock on a satellite.
-        """
-
-        if satellite_id in self._pending_satellite_parameters:
-            del self._pending_satellite_parameters[satellite_id]
-
-        if satellite_id in self._satellite_parameters:
-            del self._satellite_parameters[satellite_id]

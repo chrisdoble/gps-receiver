@@ -106,6 +106,8 @@ class BitIntegrator:
                 )
                 return
 
+        raise UnknownBitPhaseError()
+
     def _all_subframes_start_with_preamble(
         self, preamble: list[UnresolvedBit], unresolved_bits: list[UnresolvedBit]
     ) -> bool:
@@ -142,3 +144,12 @@ class BitIntegrator:
             return 1 if unresolved_bit == -1 else 0
         else:
             return 0 if unresolved_bit == -1 else 1
+
+
+class UnknownBitPhaseError(Exception):
+    """Indicates that we weren't able to determine a satellite's bit phase.
+
+    This suggests we're not tracking the satellite correctly.
+    """
+
+    pass

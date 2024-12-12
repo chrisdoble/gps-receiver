@@ -3,6 +3,7 @@ import math
 
 from .acquirer import MainProcessAcquirer
 from .antenna import Antenna
+from .bit_integrator import UnknownBitPhaseError
 from .pipeline import Pipeline
 from .subframe_decoder import ParityError
 from .types import SatelliteId
@@ -47,15 +48,30 @@ class Receiver:
             try:
                 pipeline.handle_1ms_of_samples(samples)
             except ParityError:
-                logger.info(f"[{satellite_id}] Parity error, dropping satellite")
-                del self._pipelines_by_satellite_id[satellite_id]
-                self._world.remove_satellite(satellite_id)
+                logger.info(
+                    f"[{satellite_id}] Observed parity error, dropping satellite"
+                )
+                self._drop_satellite(satellite_id)
+            except UnknownBitPhaseError:
+                logger.info(
+                    f"[{satellite_id}] Unable to determine bit phase, dropping satellite"
+                )
+                self._drop_satellite(satellite_id)
 
         solution = self._world.compute_solution()
         if solution is not None:
             logger.info(
                 f"Found solution: {solution.clock_bias}, {_ecef_to_llh(solution.position)}"
             )
+
+    def _drop_satellite(self, satellite_id: SatelliteId) -> None:
+        """Stop tracking a satellite and remove it from the world model.
+
+        This is called when we lose lock on a satellite.
+        """
+
+        del self._pipelines_by_satellite_id[satellite_id]
+        self._world.drop_satellite(satellite_id)
 
 
 def _ecef_to_llh(ecef: EcefCoordinates) -> tuple[float, float, float]:
