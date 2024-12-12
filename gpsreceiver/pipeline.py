@@ -1,9 +1,9 @@
 from .acquirer import Acquisition
-from .antenna import OneMsOfSamples
 from .bit_integrator import BitIntegrator
 from .pseudosymbol_integrator import PseudosymbolIntegrator
 from .subframe_decoder import SubframeDecoder
 from .tracker import Tracker
+from .types import OneMsOfSamples
 from .world import World
 
 

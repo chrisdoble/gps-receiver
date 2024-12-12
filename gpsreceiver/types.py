@@ -1,6 +1,11 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from typing import Literal
+
+import numpy as np
 
 # A bit.
 #
@@ -16,6 +21,30 @@ Bit = Literal[0, 1]
 # pseudosymbols map to bits. However, due to the phase ambiguity of BPSK, we
 # don't know how they map until the overall phase of the signal is determined.
 Pseudosymbol = Literal[-1, 1]
+
+
+@dataclass(kw_only=True)
+class Samples:
+    """A number of samples taken at a rate of ``constants.SAMPLES_PER_SECOND``."""
+
+    # The time just after the last sample was taken.
+    end_timestamp: UtcTimestamp
+
+    # The samples.
+    #
+    # Has shape ``(n,)`` where ``n`` is the number of samples that were taken
+    # and contains ``np.complex64`` values.
+    samples: np.ndarray
+
+    # The time just before the first sample was taken.
+    start_timestamp: UtcTimestamp
+
+
+# 1 ms of samples.
+#
+# This type primarily exists for documentation purposes.
+OneMsOfSamples = Samples
+
 
 # The ID of a GPS satellite based on its PRN number. This can be an integer
 # between 1 and 32 inclusive, but PRN number 1 is not currently in use[1].

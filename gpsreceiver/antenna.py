@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
 
@@ -7,20 +6,7 @@ import numpy as np
 
 from .config import SAMPLES_PER_MILLISECOND
 from .constants import SAMPLES_PER_SECOND
-from .types import UtcTimestamp
-
-
-@dataclass(kw_only=True)
-class OneMsOfSamples:
-    # The time just after the last sample was taken.
-    end_timestamp: UtcTimestamp
-
-    # 1 ms of I/Q samples. Has shape (config.SAMPLES_PER_MILLISECOND,) and
-    # contains complex values.
-    samples: np.ndarray
-
-    # The time just before the first sample was taken.
-    start_timestamp: UtcTimestamp
+from .types import OneMsOfSamples, UtcTimestamp
 
 
 class Antenna(ABC):

@@ -9,7 +9,6 @@ from typing import cast
 
 import numpy as np
 
-from .antenna import OneMsOfSamples
 from .config import (
     ACQUISITION_INTERVAL,
     ACQUISITION_STRENGTH_THRESHOLD,
@@ -19,7 +18,7 @@ from .config import (
 )
 from .constants import SAMPLE_TIMES, SAMPLES_PER_SECOND
 from .prn_codes import COMPLEX_UPSAMPLED_PRN_CODES_BY_SATELLITE_ID
-from .types import SatelliteId, UtcTimestamp
+from .types import OneMsOfSamples, SatelliteId, UtcTimestamp
 from .utils import InvariantError, invariant
 
 

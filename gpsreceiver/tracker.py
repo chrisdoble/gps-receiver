@@ -6,7 +6,6 @@ import numpy as np
 from typing_extensions import assert_never
 
 from .acquirer import Acquisition
-from .antenna import OneMsOfSamples
 from .config import (
     CARRIER_FREQUENCY_SHIFT_TRACKING_LOOP_GAIN,
     CARRIER_PHASE_SHIFT_TRACKING_LOOP_GAIN,
@@ -15,7 +14,7 @@ from .config import (
 from .constants import L1_FREQUENCY, SAMPLE_TIMES, TRACKING_HISTORY_SIZE
 from .prn_codes import COMPLEX_UPSAMPLED_PRN_CODES_BY_SATELLITE_ID
 from .pseudosymbol_integrator import PseudosymbolIntegrator
-from .types import Side
+from .types import OneMsOfSamples, Side
 from .utils import invariant
 from .world import World
 
