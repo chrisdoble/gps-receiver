@@ -4,6 +4,7 @@ import math
 from .acquirer import MainProcessAcquirer
 from .antenna import Antenna
 from .pipeline import Pipeline
+from .subframe_decoder import ParityError
 from .types import SatelliteId
 from .utils import invariant
 from .world import EcefCoordinates, World
@@ -42,8 +43,13 @@ class Receiver:
                 acquisition, self._world
             )
 
-        for pipeline in self._pipelines_by_satellite_id.values():
-            pipeline.handle_1ms_of_samples(samples)
+        for satellite_id, pipeline in list(self._pipelines_by_satellite_id.items()):
+            try:
+                pipeline.handle_1ms_of_samples(samples)
+            except ParityError:
+                logger.info(f"[{satellite_id}] Parity error, dropping satellite")
+                del self._pipelines_by_satellite_id[satellite_id]
+                self._world.remove_satellite(satellite_id)
 
         solution = self._world.compute_solution()
         if solution is not None:
