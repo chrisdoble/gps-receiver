@@ -8,6 +8,8 @@ from .config import SAMPLES_PER_MILLISECOND, TRACKING_HISTORY_SIZE_SECONDS
 
 # Sampling
 
+L1_FREQUENCY = 1575.42e6
+
 SAMPLES_PER_SECOND = SAMPLES_PER_MILLISECOND * 1000
 
 # The time of each sample within a 1 ms sampling period (in seconds).

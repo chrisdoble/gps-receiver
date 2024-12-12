@@ -12,7 +12,7 @@ from .config import (
     CARRIER_PHASE_SHIFT_TRACKING_LOOP_GAIN,
     PRN_CODE_PHASE_SHIFT_TRACKING_LOOP_GAIN,
 )
-from .constants import SAMPLE_TIMES, TRACKING_HISTORY_SIZE
+from .constants import L1_FREQUENCY, SAMPLE_TIMES, TRACKING_HISTORY_SIZE
 from .prn_codes import COMPLEX_UPSAMPLED_PRN_CODES_BY_SATELLITE_ID
 from .pseudosymbol_integrator import PseudosymbolIntegrator
 from .types import Side
@@ -222,9 +222,8 @@ class Tracker:
         # longer be the case that 1 ms of samples contains exactly one cycle.
         # We need to account for this when updating the phase shift, otherwise
         # the differences will accumulate over time and we'll lose lock.
-        l1_frequency = 1575.42e6
         half_chips_due_to_doppler_effect = (
-            len(self._prn_code) * self._carrier_frequency_shift / l1_frequency
+            len(self._prn_code) * self._carrier_frequency_shift / L1_FREQUENCY
         )
 
         # Update the PRN code phase shift.
