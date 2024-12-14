@@ -15,6 +15,8 @@ SAMPLES_PER_SECOND = SAMPLES_PER_MILLISECOND * 1000
 # The time of each sample within a 1 ms sampling period (in seconds).
 SAMPLE_TIMES = np.arange(SAMPLES_PER_MILLISECOND) / SAMPLES_PER_SECOND
 
+SECONDS_PER_SAMPLE = 1 / SAMPLES_PER_SECOND
+
 # Tracking
 
 # The number of values to be stored in each tracking history buffer.

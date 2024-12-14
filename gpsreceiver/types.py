@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from typing import Literal
 
 import numpy as np
+
+from .constants import SAMPLES_PER_SECOND, SECONDS_PER_SAMPLE
 
 # A bit.
 #
@@ -25,7 +27,7 @@ Pseudosymbol = Literal[-1, 1]
 
 @dataclass(kw_only=True)
 class Samples:
-    """A number of samples taken at a rate of ``constants.SAMPLES_PER_SECOND``."""
+    """A set of samples taken at a rate of ``constants.SAMPLES_PER_SECOND``."""
 
     # The time just after the last sample was taken.
     end_timestamp: UtcTimestamp
@@ -38,6 +40,62 @@ class Samples:
 
     # The time just before the first sample was taken.
     start_timestamp: UtcTimestamp
+
+    def __add__(self, other: Samples) -> Samples:
+        """Concatenates two sets of samples.
+
+        When concatenating two sets of samples ``x + y``, it is assumed that
+        ``y`` immediately follows ``x`` in time. This means it makes sense to:
+
+        - use the start timestamp of ``x`` as the start timestamp of the result,
+        - use the end timestamp of ``y`` as the end timestamp of the result, and
+        - use the concatentation of ``x``'s samples followed by ``y``'s samples
+          as the samples of the result.
+        """
+
+        return Samples(
+            end_timestamp=other.end_timestamp,
+            samples=np.concatenate((self.samples, other.samples)),
+            start_timestamp=self.start_timestamp,
+        )
+
+    def __getitem__(self, key: slice) -> Samples:
+        """Returns a subset of the samples.
+
+        For example, if ``x`` contains 2046 samples then ``x[0 : 1023]``
+        contains the first 1023 samples with appropriate timestamps.
+
+        Empty slices and negative indices aren't supported.
+        """
+
+        # Check that the slice bounds are of the correct type.
+        if not (
+            (isinstance(key.start, int) or key.start is None)
+            and (isinstance(key.stop, int) or key.stop is None)
+            and key.step is None
+        ):
+            raise TypeError("Invalid slice")
+
+        start = 0 if key.start is None else key.start
+        stop = len(self.samples) if key.stop is None else key.stop
+
+        # Check that the slice bounds are valid indices.
+        if not (
+            start >= 0
+            and start < len(self.samples)
+            and stop >= 0
+            and stop <= len(self.samples)
+            and stop > start
+        ):
+            raise IndexError("Invalid slice")
+
+        return Samples(
+            end_timestamp=self.start_timestamp
+            + timedelta(seconds=stop * SECONDS_PER_SAMPLE),
+            samples=self.samples[start:stop],
+            start_timestamp=self.start_timestamp
+            + timedelta(seconds=start * SECONDS_PER_SAMPLE),
+        )
 
 
 # 1 ms of samples.

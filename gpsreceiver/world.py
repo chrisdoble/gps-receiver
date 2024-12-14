@@ -269,7 +269,7 @@ class World:
             for satellite_id in satellite_ids
         ]
 
-        for _ in range(20):
+        for _ in range(10):
             j = self._compute_jacobian(
                 guess, satellite_positions_and_signal_transit_times
             )

@@ -12,8 +12,6 @@ from datetime import timedelta
 
 import numpy as np
 
-from .types import SatelliteId
-
 # Sampling
 
 # A GPS satellite's navigation message (50 bps) is XORed with its C/A PRN code
@@ -58,7 +56,7 @@ ACQUISITION_STRENGTH_THRESHOLD: float = 3
 # ID 1 isn't included because it's not currently in use[1].
 #
 # 1: https://en.wikipedia.org/wiki/List_of_GPS_satellites#PRN_status_by_satellite_block
-ALL_SATELLITE_IDS: set[SatelliteId] = set(range(2, 33))
+ALL_SATELLITE_IDS: set[int] = set(range(2, 33))
 
 # During acquisition we perform both coherent and non-coherent integration over
 # multiple 1 ms periods of samples and add the results. This strengthens weak

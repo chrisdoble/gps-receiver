@@ -1,12 +1,11 @@
 import logging
 import math
 
-from .acquirer import MainProcessAcquirer
-from .antenna import Antenna
+from .acquirer import Acquirer
 from .bit_integrator import UnknownBitPhaseError
 from .pipeline import Pipeline
 from .subframe_decoder import ParityError
-from .types import SatelliteId
+from .types import OneMsOfSamples, SatelliteId
 from .utils import invariant
 from .world import EcefCoordinates, World
 
@@ -14,14 +13,12 @@ logger = logging.getLogger(__name__)
 
 
 class Receiver:
-    def __init__(self, antenna: Antenna) -> None:
-        self._acquirer = MainProcessAcquirer()
-        self._antenna = antenna
+    def __init__(self, acquirer: Acquirer) -> None:
+        self._acquirer = acquirer
         self._pipelines_by_satellite_id: dict[SatelliteId, Pipeline] = {}
         self._world = World()
 
-    def step_1ms(self) -> None:
-        samples = self._antenna.sample_1ms()
+    def handle_1ms_of_samples(self, samples: OneMsOfSamples) -> None:
         acquisition = self._acquirer.handle_1ms_of_samples(
             samples, set(self._pipelines_by_satellite_id.keys())
         )
