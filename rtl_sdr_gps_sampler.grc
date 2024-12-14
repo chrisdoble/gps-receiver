@@ -37,7 +37,7 @@ blocks:
   id: variable
   parameters:
     comment: ''
-    value: re.sub(r'[-:+]', '', datetime.now(timezone.utc).isoformat())
+    value: str(datetime.now(timezone.utc).timestamp())
   states:
     bus_sink: false
     bus_source: false
@@ -52,7 +52,7 @@ blocks:
     alias: ''
     append: 'False'
     comment: ''
-    file: '''./data/samples-'' + timestamp'
+    file: '''./samples-'' + timestamp'
     type: complex
     unbuffered: 'False'
     vlen: '1'

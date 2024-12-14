@@ -4,6 +4,7 @@
 # Project
 data
 rtl_sdr_gps_sampler.py
+samples-*
 
 # Python
 __pycache__
