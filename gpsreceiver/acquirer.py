@@ -229,23 +229,23 @@ def _acquire_satellite(
     # large range and gradually narrow down on the most promising regions.
     #
     # The initial central value is 0 and the initial frequency shift range
-    # is ±7.168 kHz. This range was chosen to accommodate all reasonable
+    # is ±7.680 kHz. This range was chosen to accommodate all reasonable
     # receiver and satellite motion, receiver oscillation variance, etc. On
-    # each iteration the range is split into 29 equally-spaced values
+    # each iteration the range is split into 31 equally-spaced values
     # (including endpoints) and is reduced by a factor of two. This means on
     # the first iteration the step size is 512 Hz, the second it's 256 Hz,
     # etc., until the tenth iteration where it's 1 Hz and we're searching a
     # continuous range. At that point we've found the strongest candidate.
     best_acquisition: Acquisition | None = None
     centre_frequency_shift: float = 0
-    half_frequency_shift_range: float = 7_168
+    half_frequency_shift_range: float = 7_680
 
     while half_frequency_shift_range >= 14:
         new_acquisition = _acquire_satellite_at_frequency_shifts(
             np.linspace(
                 centre_frequency_shift - half_frequency_shift_range,
                 centre_frequency_shift + half_frequency_shift_range,
-                29,
+                31,
             ),
             samples,
             satellite_id,
