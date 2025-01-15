@@ -113,14 +113,17 @@ UPSAMPLED_PRN_CODES_BY_SATELLITE_ID = {
     for satellite_id, prn_code in PRN_CODES_BY_SATELLITE_ID.items()
 }
 
-# The same upsampled C/A PRN codes as above, but with 0s replaced with -1.
+# The same upsampled C/A PRN codes as above, but with 0 mapped to 1 and 1 to -1.
 #
 # As the data transmitted by a GPS satellite is modulated onto the carrier wave
 # via BPSK, 0s and 1s result in signals that are 180 degrees out of phase. Thus,
 # when we attempt to correlate a received signal with a local replica of a C/A
-# PRN code we want the code chips to also be 180 degrees out of phase. If we
-# left the 0s as-is that wouldn't be the case so we replace them with -1s.
+# PRN code we want the code chips to also be 180 degrees out of phase. Whether
+# 0 is mapped to 1 and 1 to -1 or vice versa is arbitrary, but this mapping has
+# the benefit that the XOR operation becomes equivalent to multiplication.
+#
+# This is also called polar non-return-to-zero encoding.
 COMPLEX_UPSAMPLED_PRN_CODES_BY_SATELLITE_ID = {
-    satellite_id: np.array([-1 if b == 0 else 1 for b in prn_code])
+    satellite_id: np.array([-1 if b == 1 else 1 for b in prn_code])
     for satellite_id, prn_code in UPSAMPLED_PRN_CODES_BY_SATELLITE_ID.items()
 }
