@@ -132,4 +132,4 @@ SOLUTION_HISTORY_SIZE = 10
 #
 # This includes carrier frequency shifts, carrier phase shifts, correlations,
 # and PRN code phase shifts. Divide by 1000 to get the number of seconds.
-TRACKING_HISTORY_SIZE = 5000
+TRACKING_HISTORY_SIZE = 1000
