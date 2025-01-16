@@ -33,14 +33,22 @@ class SubframeDecoder:
     """
 
     def __init__(self, satellite_id: SatelliteId, world: World) -> None:
+        # The number of subframes that have been decoded.
+        self._count = 0
+
         self._satellite_id = satellite_id
         self._world = world
+
+    @property
+    def count(self) -> int:
+        return self._count
 
     def handle_bits(self, bits: list[Bit]) -> None:
         subframe = _SubframeDecoder(bits).decode()
         logger.info(
             f"[{self._satellite_id}] Decoded subframe {subframe.handover.subframe_id}"
         )
+        self._count += 1
         self._world.handle_subframe(self._satellite_id, subframe)
 
 

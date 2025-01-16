@@ -71,11 +71,6 @@ MS_OF_SAMPLES_REQUIRED_TO_PERFORM_ACQUISITION: int = 10
 
 # Tracking
 
-# For each satellite, a buffer of the most recent tracking parameters (carrier
-# frequency shift, PRN code phase shift, etc.) are recorded to aide debugging
-# and graphing. This constant controls how many seconds of data are recorded.
-TRACKING_HISTORY_SIZE_SECONDS: float = 5
-
 # The gain to use in the PRN code phase shift tracking loop.
 #
 # This determines how much noise affects the loop and how quickly it can respond
@@ -115,3 +110,26 @@ BITS_REQUIRED_TO_DETECT_BOUNDARIES = 20
 # How many preambles ``BitIntegrator`` must detect in order to determine the
 # boundaries between subframes and the overall bit phase.
 PREAMBLES_REQUIRED_TO_DETERMINE_BIT_PHASE = 3
+
+# HTTP server payload
+
+# The interval at which data is sent to the HTTP server subprocess, in ms.
+#
+# The data can be around 1 MB in size, so we don't want to send it too often
+# (otherwise the inter-process queue could become full or its feeder thread
+# could take up too much CPU time and affect the receiver). On the other hand
+# we don't want it to be too infrequent or the dashboard will become stale.
+#
+# 1 s was chosen arbitrarily.
+HTTP_UPDATE_INTERVAL_MS = 1000
+
+# The number of values to store in the solution history buffer.
+#
+# Each solution contains an estimate of the receiver's clock bias and location.
+SOLUTION_HISTORY_SIZE = 10
+
+# The number of values to store in each tracking history buffer.
+#
+# This includes carrier frequency shifts, carrier phase shifts, correlations,
+# and PRN code phase shifts. Divide by 1000 to get the number of seconds.
+TRACKING_HISTORY_SIZE = 5000

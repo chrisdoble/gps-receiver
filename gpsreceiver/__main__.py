@@ -21,13 +21,16 @@ argument_parser.add_argument(
 )
 args = argument_parser.parse_args()
 
-if args.file and args.time:
-    FileAntenna(
-        Path(args.file),
-        Receiver(MainProcessAcquirer()),
-        datetime.fromtimestamp(float(args.time), tz=timezone.utc),
-    ).start()
-elif args.rtl_sdr:
-    RtlSdrAntenna(Receiver(SubprocessAcquirer())).start()
-else:
-    argument_parser.print_help()
+try:
+    if args.file and args.time:
+        FileAntenna(
+            Path(args.file),
+            Receiver(MainProcessAcquirer()),
+            datetime.fromtimestamp(float(args.time), tz=timezone.utc),
+        ).start()
+    elif args.rtl_sdr:
+        RtlSdrAntenna(Receiver(SubprocessAcquirer())).start()
+    else:
+        argument_parser.print_help()
+except KeyboardInterrupt:
+    pass

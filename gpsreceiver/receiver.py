@@ -1,13 +1,30 @@
+import asyncio
 import logging
 import math
+from collections import deque
+from dataclasses import dataclass
+from multiprocessing import Process, Queue
+from queue import Empty
+from typing import AsyncGenerator
+
+from aiohttp import web
+from pydantic import BaseModel
 
 from .acquirer import Acquirer
 from .bit_integrator import UnknownBitPhaseError
+from .config import HTTP_UPDATE_INTERVAL_MS, SOLUTION_HISTORY_SIZE
+from .http_types import (
+    GeodeticCoordinates,
+    GeodeticSolution,
+    HttpData,
+    TrackedSatellite,
+    UntrackedSatellite,
+)
 from .pipeline import Pipeline
 from .subframe_decoder import ParityError
 from .types import OneMsOfSamples, SatelliteId
 from .utils import invariant
-from .world import EcefCoordinates, World
+from .world import EcefCoordinates, EcefSolution, World
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +32,22 @@ logger = logging.getLogger(__name__)
 class Receiver:
     def __init__(self, acquirer: Acquirer) -> None:
         self._acquirer = acquirer
+
+        # Start an HTTP server in a subprocess.
+        #
+        # The receiver's data is periodically sent to the server via a queue
+        # and the server makes it available to clients, e.g. the dashboard.
+        self._http_queue: Queue = Queue()
+        self._http_subprocess = Process(
+            args=(self._http_queue,), daemon=True, target=_run_http_subprocess
+        )
+        self._http_subprocess.start()
+
+        # The number of ms since data was last sent to the HTTP subprocess.
+        self._ms_since_sending_http_data = 0
+
         self._pipelines_by_satellite_id: dict[SatelliteId, Pipeline] = {}
+        self._solutions = deque[GeodeticSolution]([], maxlen=SOLUTION_HISTORY_SIZE)
         self._world = World()
 
     def handle_1ms_of_samples(self, samples: OneMsOfSamples) -> None:
@@ -57,9 +89,17 @@ class Receiver:
 
         solution = self._world.compute_solution()
         if solution is not None:
-            logger.info(
-                f"Found solution: {solution.clock_bias}, {_ecef_to_llh(solution.position)}"
+            position = _ecef_to_geodetic(solution.position)
+            logger.info(f"Found solution: {solution.clock_bias}, {position}")
+            self._solutions.append(
+                GeodeticSolution(clock_bias=solution.clock_bias, position=position)
             )
+
+        # Periodically send updated data to the HTTP subprocess.
+        self._ms_since_sending_http_data += 1
+        if self._ms_since_sending_http_data == HTTP_UPDATE_INTERVAL_MS:
+            self._http_queue.put(self._get_http_data())
+            self._ms_since_sending_http_data = 0
 
     def _drop_satellite(self, satellite_id: SatelliteId) -> None:
         """Stop tracking a satellite and remove it from the world model.
@@ -70,11 +110,58 @@ class Receiver:
         del self._pipelines_by_satellite_id[satellite_id]
         self._world.drop_satellite(satellite_id)
 
+    def _get_http_data(self) -> HttpData:
+        return HttpData(
+            solutions=list(self._solutions),
+            tracked_satellites=[
+                pipeline.tracked_satellite
+                for pipeline in self._pipelines_by_satellite_id.values()
+            ],
+            untracked_satellites=self._acquirer.untracked_satellites,
+        )
 
-def _ecef_to_llh(ecef: EcefCoordinates) -> tuple[float, float, float]:
-    """Converts ECEF coordinates to latitude, longitude, height coordinates.
 
-    The latitude and longitude are in degrees, the height is in meters.
+def _run_http_subprocess(queue: Queue) -> None:
+    data: HttpData | None = None
+
+    async def handler(request: web.Request) -> web.Response:
+        return web.Response(
+            content_type="application/json",
+            text="null" if data is None else data.model_dump_json(),
+        )
+
+    async def check_for_data() -> None:
+        while True:
+            try:
+                arg = queue.get(False)
+                invariant(
+                    isinstance(arg, HttpData),
+                    f"Invalid argument sent to HTTP server subprocess: {arg}",
+                )
+
+                nonlocal data
+                data = arg
+            except Empty:
+                pass
+
+            await asyncio.sleep(0.001)
+
+    async def data_checker_ctx(app: web.Application) -> AsyncGenerator[None]:
+        data_checker = asyncio.create_task(check_for_data())
+
+        yield
+
+        data_checker.cancel()
+        await data_checker
+
+    app = web.Application()
+    app.add_routes([web.get("/", handler)])
+    app.cleanup_ctx.append(data_checker_ctx)
+    web.run_app(app, print=lambda x: None)
+
+
+def _ecef_to_geodetic(ecef: EcefCoordinates) -> GeodeticCoordinates:
+    """Converts ECEF coordinates to geodetic coordinates.
 
     Uses Bowring's method[1].
 
@@ -102,5 +189,9 @@ def _ecef_to_llh(ecef: EcefCoordinates) -> tuple[float, float, float]:
     n = a / math.sqrt(1 - (e * math.sin(latitude)) ** 2)
     height = p / math.cos(latitude) - n
 
-    # Convert to degrees.
-    return latitude / math.pi * 180, longitude / math.pi * 180, height
+    return GeodeticCoordinates(
+        height=height,
+        # Convert to degrees.
+        latitude=latitude / math.pi * 180,
+        longitude=longitude / math.pi * 180,
+    )

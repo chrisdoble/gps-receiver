@@ -1,12 +1,11 @@
 import logging
-from typing import Literal
 
 import numpy as np
 
 from .config import PREAMBLES_REQUIRED_TO_DETERMINE_BIT_PHASE
 from .constants import BITS_PER_SUBFRAME
 from .subframe_decoder import SubframeDecoder
-from .types import Bit, SatelliteId, UnresolvedBit
+from .types import Bit, BitPhase, SatelliteId, UnresolvedBit
 from .utils import invariant
 
 # How many bits we must collect before we may attempt to determine the
@@ -48,13 +47,16 @@ class BitIntegrator:
     ) -> None:
         # The overall bit phase.
         #
-        # ``None`` means we haven't determined the overall bit phase yet. ``-1``
-        # means ``-1`` maps to ``1`` and ``1`` to ``0``. ``1`` is the opposite.
-        self._bit_phase: Literal[None, -1, 1] = None
+        # ``None`` means we haven't determined it yet.
+        self._bit_phase: BitPhase | None = None
 
         self._satellite_id = satellite_id
         self._subframe_decoder = subframe_decoder
         self._unresolved_bits: list[UnresolvedBit] = []
+
+    @property
+    def bit_phase(self) -> BitPhase | None:
+        return self._bit_phase
 
     def handle_unresolved_bit(self, unresolved_bit: UnresolvedBit) -> None:
         self._unresolved_bits.append(unresolved_bit)

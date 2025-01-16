@@ -17,6 +17,7 @@ from .config import (
     SAMPLES_PER_MILLISECOND,
 )
 from .constants import SAMPLE_TIMES, SAMPLES_PER_SECOND
+from .http_types import UntrackedSatellite
 from .prn_codes import COMPLEX_UPSAMPLED_PRN_CODES_BY_SATELLITE_ID
 from .types import OneMsOfSamples, SatelliteId, UtcTimestamp
 from .utils import InvariantError, invariant
@@ -53,6 +54,9 @@ class Acquisition:
     # particular Doppler shift and all possible C/A PRN code phase shifts.
     strength: float
 
+    # When the acquisition occurred.
+    timestamp: UtcTimestamp
+
 
 class Acquirer(ABC):
     """Detects GPS satellite signals and determines their parameters.
@@ -65,9 +69,9 @@ class Acquirer(ABC):
         # When to next attempt acquisition for each satellite, in receiver time.
         #
         # Set to the minimum value so we perform acquisition on startup.
-        self._next_acquisition_timestamp_by_satellite_id: dict[
-            SatelliteId, UtcTimestamp
-        ] = {i: datetime(MINYEAR, 1, 1, tzinfo=timezone.utc) for i in ALL_SATELLITE_IDS}
+        self._next_acquisition_at_by_satellite_id: dict[SatelliteId, UtcTimestamp] = {
+            i: datetime(MINYEAR, 1, 1, tzinfo=timezone.utc) for i in ALL_SATELLITE_IDS
+        }
 
         # The most recently received samples.
         self._samples = deque[OneMsOfSamples](
@@ -94,14 +98,25 @@ class Acquirer(ABC):
 
         acquisition = self._get_acquisition()
         if acquisition is not None:
-            self._next_acquisition_timestamp_by_satellite_id[
-                acquisition.satellite_id
-            ] = (samples.end_timestamp + ACQUISITION_INTERVAL)
+            self._next_acquisition_at_by_satellite_id[acquisition.satellite_id] = (
+                samples.end_timestamp + ACQUISITION_INTERVAL
+            )
 
             if acquisition.strength >= ACQUISITION_STRENGTH_THRESHOLD:
                 return acquisition
 
         return None
+
+    @property
+    def untracked_satellites(self) -> list[UntrackedSatellite]:
+        return [
+            UntrackedSatellite(
+                next_acquisition_at=next_acquisition_at,
+                satellite_id=satellite_id,
+            )
+            for satellite_id, next_acquisition_at in self._next_acquisition_at_by_satellite_id.items()
+            if satellite_id not in self._tracked_satellite_ids
+        ]
 
     @abstractmethod
     def _get_acquisition(self) -> Acquisition | None:
@@ -116,7 +131,7 @@ class Acquirer(ABC):
         untracked_satellite_ids = ALL_SATELLITE_IDS - self._tracked_satellite_ids
         candidates = [
             (si, t)
-            for si, t in self._next_acquisition_timestamp_by_satellite_id.items()
+            for si, t in self._next_acquisition_at_by_satellite_id.items()
             if si in untracked_satellite_ids and t <= now
         ]
         candidates.sort(key=lambda c: c[1])
@@ -158,18 +173,18 @@ class SubprocessAcquirer(Acquirer):
         # The subprocess.
         #
         # Marked as a daemon so it's killed alongside the main process.
-        self._process = Process(
+        self._subprocess = Process(
             args=(connection,),
             daemon=True,
             target=_run_subprocess,
         )
-        self._process.start()
+        self._subprocess.start()
 
         # Whether we're waiting for the subprocess to return an ``Acquisition``.
         self._waiting = False
 
     def _get_acquisition(self) -> Acquisition | None:
-        invariant(self._process.is_alive(), "Acquisition subprocess has terminated")
+        invariant(self._subprocess.is_alive(), "Acquisition subprocess has terminated")
 
         if self._waiting:
             if self._connection.poll():
@@ -326,4 +341,5 @@ def _acquire_satellite_at_frequency_shifts(
         prn_code_phase_shift=int(prn_code_phase),
         satellite_id=satellite_id,
         strength=peak_correlation / mean_correlation,
+        timestamp=samples[-1].end_timestamp,
     )

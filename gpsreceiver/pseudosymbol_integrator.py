@@ -47,30 +47,32 @@ class PseudosymbolIntegrator:
     def __init__(
         self, bit_integrator: BitIntegrator, satellite_id: SatelliteId
     ) -> None:
+        self._bit_boundary_found = False
         self._bit_integrator = bit_integrator
-
-        # Whether we've found the boundary between navigation bits.
-        self._is_synchronised = False
-
         self._pseudosymbols: list[Pseudosymbol] = []
         self._satellite_id = satellite_id
+
+    @property
+    def bit_boundary_found(self) -> bool:
+        return self._bit_boundary_found
 
     def handle_pseudosymbol(self, pseudosymbol: Pseudosymbol) -> None:
         self._pseudosymbols.append(pseudosymbol)
 
-        # Synchronise if necessary…
-        if not self._is_synchronised:
+        # Find the bit boundary if necessary…
+        if not self._bit_boundary_found:
             # …but only if we have enough data.
             counter = Counter(self._pseudosymbols)
             if (
                 counter[-1] >= _PSEUDOSYMBOLS_REQUIRED_PER_PHASE
                 and counter[1] >= _PSEUDOSYMBOLS_REQUIRED_PER_PHASE
             ):
-                self._synchronise()
+                self._find_bit_boundary()
 
         # Group pseudosymbols into bits as long as we have enough data.
         while (
-            len(self._pseudosymbols) >= _PSEUDOSYMBOLS_PER_BIT and self._is_synchronised
+            len(self._pseudosymbols) >= _PSEUDOSYMBOLS_PER_BIT
+            and self._bit_boundary_found
         ):
             # Extract the pseudosymbols comprising the next bit.
             pseudosymbols = self._pseudosymbols[:_PSEUDOSYMBOLS_PER_BIT]
@@ -81,8 +83,8 @@ class PseudosymbolIntegrator:
             unresolved_bit: UnresolvedBit = counter.most_common(1)[0][0]
             self._bit_integrator.handle_unresolved_bit(unresolved_bit)
 
-    def _synchronise(self) -> None:
-        invariant(not self._is_synchronised, "Synchronisation has already occured")
+    def _find_bit_boundary(self) -> None:
+        invariant(not self._bit_boundary_found, "Bit boundary already found")
 
         # Calculate a score for each possible offset.
         #
@@ -103,8 +105,8 @@ class PseudosymbolIntegrator:
         best_offset = np.argmax(offset_scores)
         self._pseudosymbols = self._pseudosymbols[best_offset:]
 
-        logger.info(f"[{self._satellite_id}] Performed bit synchronisation")
-        self._is_synchronised = True
+        logger.info(f"[{self._satellite_id}] Found the bit boundary")
+        self._bit_boundary_found = True
 
 
 def _chunks[T](elements: list[T], chunk_size: int) -> list[list[T]]:

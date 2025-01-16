@@ -10,8 +10,9 @@ from .config import (
     CARRIER_FREQUENCY_SHIFT_TRACKING_LOOP_GAIN,
     CARRIER_PHASE_SHIFT_TRACKING_LOOP_GAIN,
     PRN_CODE_PHASE_SHIFT_TRACKING_LOOP_GAIN,
+    TRACKING_HISTORY_SIZE,
 )
-from .constants import L1_FREQUENCY, SAMPLE_TIMES, TRACKING_HISTORY_SIZE
+from .constants import L1_FREQUENCY, SAMPLE_TIMES
 from .prn_codes import COMPLEX_UPSAMPLED_PRN_CODES_BY_SATELLITE_ID
 from .pseudosymbol_integrator import PseudosymbolIntegrator
 from .types import OneMsOfSamples, Side
@@ -95,6 +96,14 @@ class Tracker:
 
         self._world = world
 
+    @property
+    def carrier_frequency_shifts(self) -> list[float]:
+        return list(self._carrier_frequency_shifts)
+
+    @property
+    def correlations(self) -> list[complex]:
+        return list(self._correlations)
+
     def handle_1ms_of_samples(self, samples: OneMsOfSamples) -> None:
         """Uses 1 ms of samples to determine the transmitted pseudosymbol and
         update tracking parameters."""
@@ -164,6 +173,10 @@ class Tracker:
 
         # Update the carrier wave frequency/phase shift.
         self._track_carrier(correlation)
+
+    @property
+    def prn_code_phase_shifts(self) -> list[float]:
+        return list(self._prn_code_phase_shifts)
 
     @property
     def _carrier_frequency_shift(self) -> float:

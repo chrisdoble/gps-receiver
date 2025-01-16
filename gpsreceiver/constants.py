@@ -4,7 +4,7 @@ because they're derived from other values (e.g. ``SAMPLES_PER_SECOND``)."""
 
 import numpy as np
 
-from .config import SAMPLES_PER_MILLISECOND, TRACKING_HISTORY_SIZE_SECONDS
+from .config import SAMPLES_PER_MILLISECOND
 
 # Sampling
 
@@ -16,13 +16,6 @@ SAMPLES_PER_SECOND = SAMPLES_PER_MILLISECOND * 1000
 SAMPLE_TIMES = np.arange(SAMPLES_PER_MILLISECOND) / SAMPLES_PER_SECOND
 
 SECONDS_PER_SAMPLE = 1 / SAMPLES_PER_SECOND
-
-# Tracking
-
-# The number of values to be stored in each tracking history buffer.
-#
-# This assumes we recalculate tracking parameters once per millisecond.
-TRACKING_HISTORY_SIZE = int(TRACKING_HISTORY_SIZE_SECONDS * 1000)
 
 # Navigation data demodulation
 

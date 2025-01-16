@@ -210,8 +210,8 @@ class EcefCoordinates:
 
 
 @dataclass
-class Solution:
-    """A solution computed by the GPS receiver."""
+class EcefSolution:
+    """A computed solution with the position in ECEF coordinates."""
 
     # An estimate of the receiver's clock bias, in seconds.
     #
@@ -237,7 +237,7 @@ class World:
         # Information about satellite's we're tracking.
         self._satellite_parameters: dict[SatelliteId, SatelliteParameters] = {}
 
-    def compute_solution(self) -> Solution | None:
+    def compute_solution(self) -> EcefSolution | None:
         """Compute the receiver's clock bias and position.
 
         If that's not possible, returns ``None``.
@@ -278,7 +278,26 @@ class World:
             )
             guess -= np.linalg.inv(j.T @ j) @ j.T @ r
 
-        return Solution(guess[3], EcefCoordinates(*guess[:3]))
+        return EcefSolution(guess[3], EcefCoordinates(*guess[:3]))
+
+    def has_required_subframes(self, satellite_id: SatelliteId) -> bool:
+        """Returns whether we have received all the subframes required to use a
+        particular satellite in solution calculation (subframes 1, 2, and 3)."""
+
+        return satellite_id in self._satellite_parameters
+
+    def is_healthy(self, satellite_id: SatelliteId) -> bool | None:
+        """Returns whether a particular satellite is healthy.
+
+        Returns ``None`` if we haven't received subframe 1 yet."""
+
+        if satellite_id in self._satellite_parameters:
+            return self._satellite_parameters[satellite_id].sv_health[0] == 0
+        elif satellite_id in self._pending_satellite_parameters:
+            subframe_1 = self._pending_satellite_parameters[satellite_id].subframe_1
+            return None if subframe_1 is None else subframe_1.sv_health[0] == 0
+        else:
+            return None
 
     def _compute_satellite_position_and_signal_transit_time(
         self, satellite_id: SatelliteId

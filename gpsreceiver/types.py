@@ -3,9 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Literal
+from typing import Annotated, Literal
 
 import numpy as np
+from pydantic import Field
 
 from .constants import SAMPLES_PER_SECOND, SECONDS_PER_SAMPLE
 
@@ -14,6 +15,11 @@ from .constants import SAMPLES_PER_SECOND, SECONDS_PER_SAMPLE
 # This is the result of ``BitIntegrator`` determining the overall bit phase and
 # applying it to an ``UnresolvedBit``. There's no phase ambiguity here.
 Bit = Literal[0, 1]
+
+# A signal's bit phase.
+#
+# -1 means -1 maps to 1 and 1 maps to 0. 1 means the opposite.
+BitPhase = Literal[-1, 1]
 
 # A pseudosymbol emitted by a ``Tracker``.
 #
@@ -108,7 +114,7 @@ OneMsOfSamples = Samples
 # between 1 and 32 inclusive, but PRN number 1 is not currently in use[1].
 #
 # 1: https://en.wikipedia.org/wiki/List_of_GPS_satellites#PRN_status_by_satellite_block
-SatelliteId = int
+SatelliteId = Annotated[int, Field(ge=1, le=32)]
 
 
 class Side(Enum):
