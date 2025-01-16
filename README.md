@@ -6,7 +6,7 @@ This repository contains my software-defined GPS receiver project.
 - Produces estimates in as little as ~24 s from cold start (depending on environmental factors).
 - Location estimates tend to be within a few hundred metres of the true location.
 - Runs from pre-recorded sample files or a connected RTL-SDR.
-- Written in Python with no runtime dependencies other than NumPy and pyrtlsdr.
+- Written in Python with no runtime dependencies other than aiohttp (for the dashboard), NumPy, Pydantic (for data serialisation), and pyrtlsdr.
 
 # Setup
 
@@ -17,6 +17,8 @@ If you'd like to record your own samples or run the receiver in real-time from a
 ## Software
 
 ```bash
+# gpsreceiver
+cd gpsreceiver
 python -m venv .env
 source .env/bin/activate
 pip install -r requirements.txt
@@ -34,7 +36,7 @@ The file must contain a series of I/Q samples recorded at a rate matching `SAMPL
   Sample 0 I    Sample 0 Q    Sample 1 I    Sample 1 Q
 ```
 
-You can pass the file to the GPS receiver by running
+You can pass the file to the GPS receiver by running the following from within the `gpsreceiver` directory
 
 ```bash
 python -m gpsreceiver -f $FILE_PATH -t $START_TIMESTAMP
@@ -69,9 +71,8 @@ python -m gpsreceiver --rtl-sdr
 # Development
 
 ```bash
-# Autoformat
+# gpsreceiver
+cd gpsreceiver
 make format
-
-# Type check
 make type_check
 ```

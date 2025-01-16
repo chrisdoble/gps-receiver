@@ -8,5 +8,5 @@ samples-*
 
 # Python
 __pycache__
-.env
 .mypy_cache
+gpsrecevier/.env
