@@ -8,25 +8,29 @@ This repository contains my software-defined GPS receiver project.
 - Runs from pre-recorded sample files or a connected RTL-SDR.
 - Written in Python with no runtime dependencies other than aiohttp (for the dashboard), NumPy, Pydantic (for data serialisation), and pyrtlsdr.
 
-# Setup
+# Receiver
 
-## Hardware
+The `gpsreceiver` directory contains a Python package that processes samples of GPS signals from a file or SDR dongle to estimate a clock bias and location. It logs information to `stdout`, e.g. when satellites are acquired or a solution is computed, but doesn't provide a graphical interface — for that you'll need to run the dashboard (see below).
+
+All of the commands in this section should be run from the `gpsreceiver` directory.
+
+## Setup
+
+### Hardware
 
 If you'd like to record your own samples or run the receiver in real-time from an [RTL-SDR](https://www.rtl-sdr.com/about-rtl-sdr/), you'll need [a GPS antenna](https://www.sparkfun.com/products/14986) and (optionally) [a ground plate](https://www.sparkfun.com/products/17519). You'll get the best results in large, open areas with a clear view of the sky in all directions, e.g. a park.
 
-## Software
+### Software
 
 ```bash
-# gpsreceiver
-cd gpsreceiver
 python -m venv .env
 source .env/bin/activate
 pip install -r requirements.txt
 ```
 
-# Running
+## Running
 
-## From a file
+### From a file
 
 The file must contain a series of I/Q samples recorded at a rate matching `SAMPLES_PER_MILLISECOND` in `config.py` (the default rate is 2.046 MHz). The samples' I and Q components must be represented by 32-bit floats and be interleaved, i.e.
 
@@ -62,17 +66,51 @@ If you'd like to record your own file:
 8. There will be a new file called `samples-TIMESTAMP`.
 9. Run `python -m gpsreceiver -f samples-TIMESTAMP -t TIMESTAMP`.
 
-## From an RTL-SDR
+### From an RTL-SDR
 
 ```bash
 python -m gpsreceiver --rtl-sdr
 ```
 
-# Development
+## Development
 
 ```bash
-# gpsreceiver
-cd gpsreceiver
+# Autoformat
 make format
+
+# Type check
 make type_check
+```
+
+# Dashboard
+
+The dashboard takes information from the receiver's HTTP server and renders it in a web-based interface.
+
+All commands in this section should be run from the `dashboard` directory.
+
+## Setup
+
+```bash
+pnpm install
+```
+
+## Runnning
+
+```bash
+pnpm start
+```
+
+Note that the GPS receiver must be running in order for data to be available to the dashboard.
+
+## Development
+
+```bash
+# Autoformat
+pnpm format
+
+# Lint
+pnpm lint
+
+# Type check
+pnpm type_check
 ```

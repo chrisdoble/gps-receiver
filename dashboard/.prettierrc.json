@@ -1,0 +1,7 @@
+{
+    "importOrder": ["^\\."],
+    "importOrderCaseInsensitive": true,
+    "importOrderSeparation": true,
+    "importOrderSpecifiers": true,
+    "plugins": ["@trivago/prettier-plugin-sort-imports"]
+}
