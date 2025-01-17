@@ -286,19 +286,6 @@ class World:
 
         return satellite_id in self._satellite_parameters
 
-    def is_healthy(self, satellite_id: SatelliteId) -> bool | None:
-        """Returns whether a particular satellite is healthy.
-
-        Returns ``None`` if we haven't received subframe 1 yet."""
-
-        if satellite_id in self._satellite_parameters:
-            return self._satellite_parameters[satellite_id].sv_health[0] == 0
-        elif satellite_id in self._pending_satellite_parameters:
-            subframe_1 = self._pending_satellite_parameters[satellite_id].subframe_1
-            return None if subframe_1 is None else subframe_1.sv_health[0] == 0
-        else:
-            return None
-
     def _compute_satellite_position_and_signal_transit_time(
         self, satellite_id: SatelliteId
     ) -> tuple[EcefCoordinates, float]:

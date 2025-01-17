@@ -49,13 +49,6 @@ class TrackedSatellite(BaseModel):
     # The size of this list is determined by ``TRACKING_HISTORY_SIZE``.
     correlations: list[complex]
 
-    # Whether the satellite is healthy.
-    #
-    # If a satellite is unhealthy it shouldn't be used in solution calculations.
-    #
-    # May be ``None`` if we haven't received subframe 1 yet.
-    is_healthy: bool | None
-
     # The most recent PRN code phase shift values.
     #
     # The size of this list is determined by ``TRACKING_HISTORY_SIZE``.

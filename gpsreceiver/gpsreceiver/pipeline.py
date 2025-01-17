@@ -40,7 +40,6 @@ class Pipeline:
             bit_phase=self._bit_integrator.bit_phase,
             carrier_frequency_shifts=self._tracker.carrier_frequency_shifts,
             correlations=self._tracker.correlations,
-            is_healthy=self._world.is_healthy(self._satellite_id),
             prn_code_phase_shifts=self._tracker.prn_code_phase_shifts,
             required_subframes_received=self._world.has_required_subframes(
                 self._satellite_id
