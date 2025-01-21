@@ -255,7 +255,7 @@ def _acquire_satellite(
     centre_frequency_shift: float = 0
     half_frequency_shift_range: float = 7_680
 
-    while half_frequency_shift_range >= 14:
+    while half_frequency_shift_range >= 15:
         new_acquisition = _acquire_satellite_at_frequency_shifts(
             np.linspace(
                 centre_frequency_shift - half_frequency_shift_range,
