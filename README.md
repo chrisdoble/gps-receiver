@@ -86,7 +86,7 @@ make type_check
 
 The dashboard takes information from the receiver's HTTP server and renders it in a web-based interface.
 
-All commands in this section should be run from the `dashboard` directory.
+All commands in this section should be run from the `dashboard` directory unless otherwise noted.
 
 ## Setup
 
@@ -107,6 +107,11 @@ Note that the GPS receiver must be running in order for data to be available to 
 ```bash
 # Autoformat
 pnpm format
+
+# Generate dashboard/src/http_types.ts from gpsreceiver/gpsreceiver/http_types.py.
+#
+# Run from the root of the repository.
+./bin/generate_dashboard_types.sh
 
 # Lint
 pnpm lint
