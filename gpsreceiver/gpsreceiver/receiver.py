@@ -127,6 +127,7 @@ def _run_http_subprocess(queue: Queue) -> None:
     async def handler(request: web.Request) -> web.Response:
         return web.Response(
             content_type="application/json",
+            headers={"Access-Control-Allow-Origin": "*"},
             text="null" if data is None else data.model_dump_json(),
         )
 
