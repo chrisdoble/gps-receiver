@@ -10,14 +10,15 @@ This repository contains my software-defined GPS receiver project.
 - Produces estimates in as little as ~24 s from cold start (depending on environmental factors).
 - Location estimates tend to be within a few hundred metres of the true location.
 - Runs from pre-recorded sample files or a connected RTL-SDR.
-- Has an accompanying web-based dashboard to show location estimates and satellite information in real time.
+- Has an accompanying web-based dashboard to show location estimates and satellite information.
 - Written in Python with no runtime dependencies other than aiohttp (for the dashboard), NumPy, Pydantic (for data serialisation), and pyrtlsdr.
 
 # Receiver
 
 The `gpsreceiver` directory contains a Python package that processes samples of GPS signals from a file or SDR dongle to estimate a clock bias and location. It logs information to `stdout`, e.g. when satellites are acquired or a solution is computed, but doesn't provide a graphical interface — for that you'll need to run the dashboard (see below).
 
-All of the commands in this section should be run from the `gpsreceiver` directory.
+> [!NOTE]
+> All commands in this section should be run from the `gpsreceiver` directory.
 
 ## Setup
 
@@ -91,7 +92,13 @@ make type_check
 
 The dashboard takes information from the receiver's HTTP server and renders it in a web-based interface.
 
-All commands in this section should be run from the `dashboard` directory unless otherwise noted.
+> [!NOTE]
+> All commands in this section should be run from the `dashboard` directory unless otherwise noted.
+
+> [!NOTE]
+> The receiver only exposes an HTTP server when running from a file.
+>
+> Doing so when running from real-time RTL-SDR data causes the receiver to miss data and lose lock on satellites.
 
 ## Setup
 
@@ -105,7 +112,7 @@ pnpm install
 echo "VITE_GOOGLE_MAPS_API_KEY=..." > .env.local
 ```
 
-## Runnning
+## Running
 
 ```bash
 pnpm start

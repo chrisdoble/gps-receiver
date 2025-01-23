@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 class Receiver:
-    def __init__(self, acquirer: Acquirer) -> None:
+    def __init__(self, acquirer: Acquirer, *, run_http_server: bool) -> None:
         self._acquirer = acquirer
 
         # Start an HTTP server in a subprocess.
@@ -41,12 +41,15 @@ class Receiver:
         self._http_subprocess = Process(
             args=(self._http_queue,), daemon=True, target=_run_http_subprocess
         )
-        self._http_subprocess.start()
+
+        if run_http_server:
+            self._http_subprocess.start()
 
         # The number of ms since data was last sent to the HTTP subprocess.
         self._ms_since_sending_http_data = 0
 
         self._pipelines_by_satellite_id: dict[SatelliteId, Pipeline] = {}
+        self._run_http_server = run_http_server
         self._solutions = deque[GeodeticSolution]([], maxlen=SOLUTION_HISTORY_SIZE)
         self._world = World()
 
@@ -98,7 +101,8 @@ class Receiver:
         # Periodically send updated data to the HTTP subprocess.
         self._ms_since_sending_http_data += 1
         if self._ms_since_sending_http_data == HTTP_UPDATE_INTERVAL_MS:
-            self._http_queue.put(self._get_http_data(samples.end_timestamp))
+            if self._run_http_server:
+                self._http_queue.put(self._get_http_data(samples.end_timestamp))
             self._ms_since_sending_http_data = 0
 
     def _drop_satellite(self, satellite_id: SatelliteId) -> None:

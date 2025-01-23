@@ -25,11 +25,11 @@ try:
     if args.file and args.time:
         FileAntenna(
             Path(args.file),
-            Receiver(MainProcessAcquirer()),
+            Receiver(MainProcessAcquirer(), run_http_server=True),
             datetime.fromtimestamp(float(args.time), tz=timezone.utc),
         ).start()
     elif args.rtl_sdr:
-        RtlSdrAntenna(Receiver(SubprocessAcquirer())).start()
+        RtlSdrAntenna(Receiver(SubprocessAcquirer(), run_http_server=False)).start()
     else:
         argument_parser.print_help()
 except KeyboardInterrupt:
