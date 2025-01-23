@@ -92,6 +92,12 @@ All commands in this section should be run from the `dashboard` directory unless
 
 ```bash
 pnpm install
+
+# A Google Maps API key is required to show location estimates on a map. Replace
+# the ellipses (...) with your API key. See here[1] for more instructions.
+#
+# 1: https://developers.google.com/maps/documentation/javascript/cloud-setup
+echo "VITE_GOOGLE_MAPS_API_KEY=..." > .env.local
 ```
 
 ## Runnning
