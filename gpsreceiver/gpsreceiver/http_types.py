@@ -1,7 +1,9 @@
 """This module contains types that are used to send data to the HTTP server
     subprocess and are then served by that subprocess to clients."""
 
-from pydantic import BaseModel, Field, field_serializer
+from typing import Annotated
+
+from pydantic import BaseModel, Field, WithJsonSchema, field_serializer
 
 from .types import BitPhase, SatelliteId, UtcTimestamp
 
@@ -24,11 +26,16 @@ class GeodeticSolution(BaseModel):
     position: GeodeticCoordinates
 
 
+# Pydantic serialises complex values as strings by default but it's more
+# convenient if they're two-tuples. This type tells Pydantic to treat them as
+# such when generating a JSON schema (as done in generate_dashboard_types.sh).
+Complex = Annotated[
+    complex, WithJsonSchema({"items": {"type": "number"}, "type": "array"})
+]
+
+
 class TrackedSatellite(BaseModel):
     """Data regarding a tracked satellite."""
-
-    # When the receiver started tracking the satellite.
-    acquired_at: UtcTimestamp
 
     # Whether the boundary between different bits' pseudosymbols has been found.
     bit_boundary_found: bool
@@ -47,7 +54,10 @@ class TrackedSatellite(BaseModel):
     # local replica. These are used to plot a constellation diagram.
     #
     # The size of this list is determined by ``TRACKING_HISTORY_SIZE``.
-    correlations: list[complex]
+    correlations: list[Complex]
+
+    # The duration for which the satellite has been tracked, in seconds.
+    duration: float
 
     # The most recent PRN code phase shift values.
     #
@@ -64,8 +74,8 @@ class TrackedSatellite(BaseModel):
     # The number of subframes that have been decoded from this satellite.
     subframe_count: int
 
-    # Pydantic serialises complex values as strings by default. It's more
-    # convenient if they're two-tuples so this field serialiser does that.
+    # Pydantic serialises complex values as strings by default but it's more
+    # convenient if they're two-tuples. This field serialiser does that.
     @field_serializer("correlations")
     def serialize_correlations(self, correlations: list[complex]) -> list[list[float]]:
         return [[correlation.real, correlation.imag] for correlation in correlations]

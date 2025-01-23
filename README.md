@@ -1,11 +1,16 @@
 This repository contains my software-defined GPS receiver project.
 
+<p align="center">
+  <img src="./screenshot.png" width="500"/>
+</p>
+
 # Features
 
 - Uses the legacy coarse/acquisition (C/A) code to produce clock bias and location estimates.
 - Produces estimates in as little as ~24 s from cold start (depending on environmental factors).
 - Location estimates tend to be within a few hundred metres of the true location.
 - Runs from pre-recorded sample files or a connected RTL-SDR.
+- Has an accompanying web-based dashboard to show location estimates and satellite information in real time.
 - Written in Python with no runtime dependencies other than aiohttp (for the dashboard), NumPy, Pydantic (for data serialisation), and pyrtlsdr.
 
 # Receiver

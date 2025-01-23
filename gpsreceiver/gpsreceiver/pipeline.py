@@ -29,17 +29,13 @@ class Pipeline:
         self._tracker = Tracker(acquisition, self._pseudosymbol_integrator, world)
         self._world = world
 
-    def handle_1ms_of_samples(self, samples: OneMsOfSamples) -> None:
-        self._tracker.handle_1ms_of_samples(samples)
-
-    @property
-    def tracked_satellite(self) -> TrackedSatellite:
+    def get_tracked_satellite(self, time: UtcTimestamp) -> TrackedSatellite:
         return TrackedSatellite(
-            acquired_at=self._acquired_at,
             bit_boundary_found=self._pseudosymbol_integrator.bit_boundary_found,
             bit_phase=self._bit_integrator.bit_phase,
             carrier_frequency_shifts=self._tracker.carrier_frequency_shifts,
             correlations=self._tracker.correlations,
+            duration=(time - self._acquired_at).total_seconds(),
             prn_code_phase_shifts=self._tracker.prn_code_phase_shifts,
             required_subframes_received=self._world.has_required_subframes(
                 self._satellite_id
@@ -47,3 +43,6 @@ class Pipeline:
             satellite_id=self._satellite_id,
             subframe_count=self._subframe_decoder.count,
         )
+
+    def handle_1ms_of_samples(self, samples: OneMsOfSamples) -> None:
+        self._tracker.handle_1ms_of_samples(samples)

@@ -30,11 +30,11 @@ export interface GeodeticCoordinates {
  * Data regarding a tracked satellite.
  */
 export interface TrackedSatellite {
-  acquired_at: string;
   bit_boundary_found: boolean;
   bit_phase: (-1 | 1) | null;
   carrier_frequency_shifts: number[];
-  correlations: string[];
+  correlations: number[][];
+  duration: number;
   prn_code_phase_shifts: number[];
   required_subframes_received: boolean;
   satellite_id: number;

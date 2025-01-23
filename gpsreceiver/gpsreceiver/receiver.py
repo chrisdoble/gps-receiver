@@ -22,7 +22,7 @@ from .http_types import (
 )
 from .pipeline import Pipeline
 from .subframe_decoder import ParityError
-from .types import OneMsOfSamples, SatelliteId
+from .types import OneMsOfSamples, SatelliteId, UtcTimestamp
 from .utils import invariant
 from .world import EcefCoordinates, EcefSolution, World
 
@@ -98,7 +98,7 @@ class Receiver:
         # Periodically send updated data to the HTTP subprocess.
         self._ms_since_sending_http_data += 1
         if self._ms_since_sending_http_data == HTTP_UPDATE_INTERVAL_MS:
-            self._http_queue.put(self._get_http_data())
+            self._http_queue.put(self._get_http_data(samples.end_timestamp))
             self._ms_since_sending_http_data = 0
 
     def _drop_satellite(self, satellite_id: SatelliteId) -> None:
@@ -110,11 +110,11 @@ class Receiver:
         del self._pipelines_by_satellite_id[satellite_id]
         self._world.drop_satellite(satellite_id)
 
-    def _get_http_data(self) -> HttpData:
+    def _get_http_data(self, time: UtcTimestamp) -> HttpData:
         return HttpData(
             solutions=list(self._solutions),
             tracked_satellites=[
-                pipeline.tracked_satellite
+                pipeline.get_tracked_satellite(time)
                 for pipeline in self._pipelines_by_satellite_id.values()
             ],
             untracked_satellites=self._acquirer.untracked_satellites,

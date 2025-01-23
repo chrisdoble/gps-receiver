@@ -7,10 +7,12 @@ import {
 } from "@vis.gl/react-google-maps";
 import { useEffect, useState } from "react";
 
+import "./Dashboard.css";
 import { HttpData } from "./http_types";
+import TrackedSatelliteInformation from "./TrackedSatelliteInformation";
 
 export default function Dashboard() {
-  // Fetch data from the server every 1 s.
+  // Periodically fetch data from the server.
   //
   // undefined means we haven't received a response from the receiver yet, null
   // means we've received a response but it contained no data (the receiver is
@@ -25,7 +27,7 @@ export default function Dashboard() {
         console.error(e);
         setData(undefined);
       }
-    }, 1000);
+    }, 2000);
     return () => clearInterval(intervalId);
   }, []);
 
@@ -40,35 +42,54 @@ export default function Dashboard() {
       } of data.solutions) {
         bounds.extend({ lat, lng });
       }
-      map.fitBounds(bounds, 200);
+      map.fitBounds(bounds, 150);
     }
   }, [core, data, map]);
 
   if (data === undefined) {
-    return <p>Waiting to receive data from the server.</p>;
+    return <p className="message">Waiting for the server to start.</p>;
   }
 
   if (data === null) {
-    return <p>The server is running but it hasn't collected any data yet.</p>;
+    return <p className="message">Waiting for the server to collect data.</p>;
   }
 
   return (
-    <div style={{ height: "500px" }}>
-      <Map
-        clickableIcons={false}
-        defaultCenter={{ lat: 0, lng: 0 }}
-        defaultZoom={0}
-        disableDefaultUI
-        gestureHandling="none"
-        mapId="DEMO_MAP_ID"
-        renderingType={RenderingType.VECTOR}
-      >
-        {data.solutions.map(
-          ({ position: { latitude: lat, longitude: lng } }, i) => (
-            <AdvancedMarker key={i} position={{ lat, lng }} />
-          ),
-        )}
-      </Map>
-    </div>
+    <>
+      {/* Map */}
+      <div className="map-container">
+        <Map
+          clickableIcons={false}
+          defaultCenter={{ lat: 0, lng: 0 }}
+          defaultZoom={0}
+          disableDefaultUI
+          gestureHandling="none"
+          mapId="DEMO_MAP_ID"
+          renderingType={RenderingType.VECTOR}
+        >
+          {data.solutions.map(
+            ({ position: { latitude: lat, longitude: lng } }, i) => (
+              <AdvancedMarker key={i} position={{ lat, lng }} />
+            ),
+          )}
+        </Map>
+      </div>
+
+      {/* Tracked satellites */}
+      {data.tracked_satellites.length === 0 ? (
+        <p>No satellites have been acquired yet.</p>
+      ) : (
+        <div className="tracked-satellites-container">
+          {data.tracked_satellites
+            .toSorted(({ satellite_id: a }, { satellite_id: b }) => a - b)
+            .map((trackedSatellite) => (
+              <TrackedSatelliteInformation
+                key={trackedSatellite.satellite_id}
+                trackedSatellite={trackedSatellite}
+              />
+            ))}
+        </div>
+      )}
+    </>
   );
 }

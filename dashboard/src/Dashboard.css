@@ -1,0 +1,23 @@
+body {
+    font-family: sans-serif;
+    margin: 0;
+}
+
+.message {
+    left: 50%;
+    margin: 0;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.map-container {
+    height: 400px;
+}
+
+.tracked-satellites-container {
+    display: grid;
+    grid-gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    padding: 10px;
+}

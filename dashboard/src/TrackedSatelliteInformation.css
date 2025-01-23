@@ -1,0 +1,47 @@
+.tracked-satellite-container {
+    background: #fafafa;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+.tracked-satellite-container h1 {
+    font-size: 1.5em;
+    margin: 0 0 10px 0;
+}
+
+.tracked-satellite-container ol {
+    list-style: none;
+    margin: 0 0 10px 0;
+    padding: 0;
+}
+
+.tracked-satellite-container dl {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    margin: 0 0 10px 0;
+}
+
+.tracked-satellite-container dt {
+    margin-right: 5px;
+}
+
+.tracked-satellite-container dd {
+    margin: 0;
+}
+
+.tracked-satellite-container .line-charts-container {
+    display: flex;
+    margin: 0 0 10px 0;
+}
+
+.line-chart-container {
+    display: flex;
+    flex-basis: 50%;
+    flex-direction: column;
+}
+
+.chart-title {
+    font-size: 0.8em;
+    margin: 0 0 5px 0;
+    text-align: center;
+}

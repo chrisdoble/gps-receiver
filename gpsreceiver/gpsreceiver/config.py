@@ -121,7 +121,7 @@ PREAMBLES_REQUIRED_TO_DETERMINE_BIT_PHASE = 3
 # we don't want it to be too infrequent or the dashboard will become stale.
 #
 # 1 s was chosen arbitrarily.
-HTTP_UPDATE_INTERVAL_MS = 1000
+HTTP_UPDATE_INTERVAL_MS = 2000
 
 # The number of values to store in the solution history buffer.
 #
