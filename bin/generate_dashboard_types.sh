@@ -4,7 +4,7 @@ set -eu
 DIR="$(cd $(dirname "$0") && pwd)"
 
 main() {
-    if [[ "$1" == "--help" ]]; then
+    if [[ "$@" == "--help" ]]; then
         echo "Generates dashboard/src/http_types.ts from gpsreceiver/gpsreceiver/http_types.py"
         exit
     fi
