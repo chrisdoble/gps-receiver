@@ -3,9 +3,9 @@ from collections import Counter
 
 import numpy as np
 
-from .bit_integrator import BitIntegrator
 from .config import BITS_REQUIRED_TO_DETECT_BOUNDARIES
-from .types import Pseudosymbol, SatelliteId, UnresolvedBit
+from .pseudobit_integrator import PseudobitIntegrator
+from .types import Pseudobit, Pseudosymbol, SatelliteId
 from .utils import invariant
 
 _PSEUDOSYMBOLS_PER_BIT = 20
@@ -41,14 +41,14 @@ class PseudosymbolIntegrator:
 
     This class takes pseudosymbols from a ``Tracker``, determines which groups
     of 20 pseudosymbols should be considered a single navigation bit, and
-    forwards the results to a ``BitIntegrator``.
+    forwards the results to a ``PseudobitIntegrator``.
     """
 
     def __init__(
-        self, bit_integrator: BitIntegrator, satellite_id: SatelliteId
+        self, pseudobit_integrator: PseudobitIntegrator, satellite_id: SatelliteId
     ) -> None:
         self._bit_boundary_found = False
-        self._bit_integrator = bit_integrator
+        self._pseudobit_integrator = pseudobit_integrator
         self._pseudosymbols: list[Pseudosymbol] = []
         self._satellite_id = satellite_id
 
@@ -80,8 +80,8 @@ class PseudosymbolIntegrator:
 
             # Determine the (phase ambiguous) bit.
             counter = Counter(pseudosymbols)
-            unresolved_bit: UnresolvedBit = counter.most_common(1)[0][0]
-            self._bit_integrator.handle_unresolved_bit(unresolved_bit)
+            pseudobit: Pseudobit = counter.most_common(1)[0][0]
+            self._pseudobit_integrator.handle_pseudobit(pseudobit)
 
     def _find_bit_boundary(self) -> None:
         invariant(not self._bit_boundary_found, "Bit boundary already found")

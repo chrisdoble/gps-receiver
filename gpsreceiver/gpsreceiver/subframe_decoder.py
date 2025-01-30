@@ -28,8 +28,8 @@ logger = logging.getLogger(__name__)
 class SubframeDecoder:
     """Decodes subframes.
 
-    This class takes subframe ``Bit``s from a ``BitIntegrator``, decodes them
-    into instances of data classes, and forwards them to the ``World``.
+    This class takes subframe ``Bit``s from a ``PseudobitIntegrator``, decodes
+    them into instances of data classes, and forwards them to the ``World``.
     """
 
     def __init__(self, satellite_id: SatelliteId, world: World) -> None:

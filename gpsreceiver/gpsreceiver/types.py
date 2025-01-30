@@ -12,8 +12,8 @@ from .constants import SAMPLES_PER_SECOND, SECONDS_PER_SAMPLE
 
 # A bit.
 #
-# This is the result of ``BitIntegrator`` determining the overall bit phase and
-# applying it to an ``UnresolvedBit``. There's no phase ambiguity here.
+# This is the result of ``PseudobitIntegrator`` determining the overall bit
+# phase and applying it to an ``Pseudobit``. There's no phase ambiguity here.
 Bit = Literal[0, 1]
 
 # A signal's bit phase.
@@ -133,7 +133,7 @@ class Side(Enum):
 # to the same underlying navigation bit, determines the predominant phase within
 # that group, and emits the result. We can't call these navigation bits yet
 # because we haven't applied the bit phase. This is one of those values.
-UnresolvedBit = Literal[-1, 1]
+Pseudobit = Literal[-1, 1]
 
 # A datetime in the UTC time zone.
 #

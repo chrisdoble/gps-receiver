@@ -107,8 +107,8 @@ CARRIER_PHASE_SHIFT_TRACKING_LOOP_GAIN = 500
 # (i.e. multiples of 20) must be collected before this process can occur.
 BITS_REQUIRED_TO_DETECT_BOUNDARIES = 20
 
-# How many preambles ``BitIntegrator`` must detect in order to determine the
-# boundaries between subframes and the overall bit phase.
+# How many preambles ``PseudobitIntegrator`` must detect in order to determine
+# the boundaries between subframes and the overall bit phase.
 PREAMBLES_REQUIRED_TO_DETERMINE_BIT_PHASE = 3
 
 # HTTP server payload

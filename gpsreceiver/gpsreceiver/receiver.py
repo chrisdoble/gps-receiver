@@ -11,7 +11,6 @@ from aiohttp import web
 from pydantic import BaseModel
 
 from .acquirer import Acquirer
-from .bit_integrator import UnknownBitPhaseError
 from .config import HTTP_UPDATE_INTERVAL_MS, SOLUTION_HISTORY_SIZE
 from .http_types import (
     GeodeticCoordinates,
@@ -21,6 +20,7 @@ from .http_types import (
     UntrackedSatellite,
 )
 from .pipeline import Pipeline
+from .pseudobit_integrator import UnknownBitPhaseError
 from .subframe_decoder import ParityError
 from .types import OneMsOfSamples, SatelliteId, UtcTimestamp
 from .utils import invariant
