@@ -1,6 +1,7 @@
 import {
   AdvancedMarker,
   Map,
+  Pin,
   RenderingType,
   useMap,
   useMapsLibrary,
@@ -12,6 +13,8 @@ import { HttpData } from "./http_types";
 import TrackedSatelliteInformation from "./TrackedSatelliteInformation";
 
 export default function Dashboard() {
+  const actualLocation = getActualLocation();
+
   // Periodically fetch data from the server.
   //
   // undefined means we haven't received a response from the receiver yet, null
@@ -23,8 +26,7 @@ export default function Dashboard() {
       try {
         const response = await fetch("http://localhost:8080/");
         setData(await response.json());
-      } catch (e) {
-        console.error(e);
+      } catch {
         setData(undefined);
       }
     }, 2000);
@@ -37,6 +39,9 @@ export default function Dashboard() {
   useEffect(() => {
     if (core !== null && data != null && map !== null) {
       const bounds = new core.LatLngBounds();
+      if (actualLocation !== null) {
+        bounds.extend(actualLocation);
+      }
       for (const {
         position: { latitude: lat, longitude: lng },
       } of data.solutions) {
@@ -44,7 +49,7 @@ export default function Dashboard() {
       }
       map.fitBounds(bounds, 150);
     }
-  }, [core, data, map]);
+  }, [actualLocation, core, data, map]);
 
   if (data === undefined) {
     return <p className="message">Waiting for the server to start.</p>;
@@ -67,6 +72,15 @@ export default function Dashboard() {
           mapId="DEMO_MAP_ID"
           renderingType={RenderingType.VECTOR}
         >
+          {actualLocation && (
+            <AdvancedMarker key="actual" position={actualLocation}>
+              <Pin
+                background="#4285F4"
+                borderColor="#174EA6"
+                glyphColor="#174EA6"
+              />
+            </AdvancedMarker>
+          )}
           {data.solutions.map(
             ({ position: { latitude: lat, longitude: lng } }, i) => (
               <AdvancedMarker key={i} position={{ lat, lng }} />
@@ -92,4 +106,23 @@ export default function Dashboard() {
       )}
     </>
   );
+}
+
+function getActualLocation(): google.maps.LatLngLiteral | null {
+  const s = import.meta.env.VITE_ACTUAL_LOCATION;
+  if (s === undefined) {
+    return null;
+  }
+
+  const ss = s.split(",");
+  if (ss.length !== 2) {
+    throw Error(`Invalid actual location: ${s}`);
+  }
+
+  const ns = ss.map(parseFloat);
+  if (ns.some(isNaN)) {
+    throw Error(`Invalid actual location: ${s}`);
+  }
+
+  return { lat: ns[0], lng: ns[1] };
 }

@@ -109,7 +109,12 @@ pnpm install
 # the ellipses (...) with your API key. See here[1] for more instructions.
 #
 # 1: https://developers.google.com/maps/documentation/javascript/cloud-setup
-echo "VITE_GOOGLE_MAPS_API_KEY=..." > .env.local
+echo "VITE_GOOGLE_MAPS_API_KEY=..." >> .env.local
+
+# If you know the receiver's actual location and want to show it on the map to
+# compare it with the estimated location, set this environment variable. Replace
+# LAT and LNG with the receiver's actual latitude and longitude.
+echo "VITE_ACTUAL_LOCATION=LAT,LNG" >> .env.local
 ```
 
 ## Running
