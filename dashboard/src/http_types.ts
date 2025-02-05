@@ -7,7 +7,7 @@
  * Data sent to the HTTP server subprocess to be served to clients.
  */
 export interface HttpData {
-  solutions: GeodeticSolution[];
+  latest_solution: GeodeticSolution | null;
   tracked_satellites: TrackedSatellite[];
   untracked_satellites: UntrackedSatellite[];
 }

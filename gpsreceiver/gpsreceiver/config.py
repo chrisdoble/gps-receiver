@@ -123,11 +123,6 @@ PREAMBLES_REQUIRED_TO_DETERMINE_BIT_PHASE = 3
 # 2 s was chosen arbitrarily.
 HTTP_UPDATE_INTERVAL_MS = 2000
 
-# The number of values to store in the solution history buffer.
-#
-# Each solution contains an estimate of the receiver's clock bias and location.
-SOLUTION_HISTORY_SIZE = 10
-
 # The number of values to store in each tracking history buffer.
 #
 # This includes carrier frequency shifts, carrier phase shifts, correlations,

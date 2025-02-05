@@ -94,10 +94,8 @@ class UntrackedSatellite(BaseModel):
 class HttpData(BaseModel):
     """Data sent to the HTTP server subprocess to be served to clients."""
 
-    # The most recently calculated solutions.
-    #
-    # The size of the list is determined by ``SOLUTION_HISTORY_SIZE``.
-    solutions: list[GeodeticSolution]
+    # The most recently calculated solution (if any).
+    latest_solution: GeodeticSolution | None
 
     # Satellites that are currently being tracked by the receiver.
     tracked_satellites: list[TrackedSatellite]

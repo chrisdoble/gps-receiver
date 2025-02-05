@@ -33,7 +33,7 @@ export default function Dashboard() {
     return () => clearInterval(intervalId);
   }, []);
 
-  // Update the map's viewport to contain the location estimates.
+  // Update the map's viewport to contain the location estimate.
   const core = useMapsLibrary("core");
   const map = useMap();
   useEffect(() => {
@@ -42,9 +42,10 @@ export default function Dashboard() {
       if (actualLocation !== null) {
         bounds.extend(actualLocation);
       }
-      for (const {
-        position: { latitude: lat, longitude: lng },
-      } of data.solutions) {
+      if (data.latest_solution !== null) {
+        const {
+          position: { latitude: lat, longitude: lng },
+        } = data.latest_solution;
         bounds.extend({ lat, lng });
       }
       map.fitBounds(bounds, 150);
@@ -81,10 +82,14 @@ export default function Dashboard() {
               />
             </AdvancedMarker>
           )}
-          {data.solutions.map(
-            ({ position: { latitude: lat, longitude: lng } }, i) => (
-              <AdvancedMarker key={i} position={{ lat, lng }} />
-            ),
+          {data.latest_solution && (
+            <AdvancedMarker
+              key="estimated"
+              position={{
+                lat: data.latest_solution.position.latitude,
+                lng: data.latest_solution.position.longitude,
+              }}
+            />
           )}
         </Map>
       </div>

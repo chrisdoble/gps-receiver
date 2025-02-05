@@ -11,7 +11,7 @@ from aiohttp import web
 from pydantic import BaseModel
 
 from .acquirer import Acquirer
-from .config import HTTP_UPDATE_INTERVAL_MS, SOLUTION_HISTORY_SIZE
+from .config import HTTP_UPDATE_INTERVAL_MS
 from .http_types import (
     GeodeticCoordinates,
     GeodeticSolution,
@@ -48,9 +48,9 @@ class Receiver:
         # The number of ms since data was last sent to the HTTP subprocess.
         self._ms_since_sending_http_data = 0
 
+        self._latest_solution: GeodeticSolution | None = None
         self._pipelines_by_satellite_id: dict[SatelliteId, Pipeline] = {}
         self._run_http_server = run_http_server
-        self._solutions = deque[GeodeticSolution]([], maxlen=SOLUTION_HISTORY_SIZE)
         self._world = World()
 
     def handle_1ms_of_samples(self, samples: OneMsOfSamples) -> None:
@@ -94,8 +94,8 @@ class Receiver:
         if solution is not None:
             position = _ecef_to_geodetic(solution.position)
             logger.info(f"Found solution: {solution.clock_bias}, {position}")
-            self._solutions.append(
-                GeodeticSolution(clock_bias=solution.clock_bias, position=position)
+            self._latest_solution = GeodeticSolution(
+                clock_bias=solution.clock_bias, position=position
             )
 
         # Periodically send updated data to the HTTP subprocess.
@@ -116,7 +116,7 @@ class Receiver:
 
     def _get_http_data(self, time: UtcTimestamp) -> HttpData:
         return HttpData(
-            solutions=list(self._solutions),
+            latest_solution=self._latest_solution,
             tracked_satellites=[
                 pipeline.get_tracked_satellite(time)
                 for pipeline in self._pipelines_by_satellite_id.values()
