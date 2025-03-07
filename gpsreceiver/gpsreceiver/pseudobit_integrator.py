@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 
 
 class PseudobitIntegrator:
-    """Integrates ``Pseudobbits`` into subframes.
+    """Integrates ``Pseudobits`` into subframes.
 
     Each subframe is 300 bits long and starts with a telemetry word which in
     turn starts with a preamble that's the same for every subframe. We can use
