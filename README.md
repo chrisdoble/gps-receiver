@@ -1,7 +1,15 @@
 This repository contains my software-defined GPS receiver project.
 
 <p align="center">
-  <img src="./screenshot.png" width="500"/>
+  <img src="./presentation/1 introduction/images/10 dashboard.png" width="500"/>
+</p>
+
+I also made a video series about the process that you can watch [on YouTube](https://www.youtube.com/playlist?list=PLmlXFuUXRl5BnKM9PM_tT9uIzlwUxGzLb).
+
+<p align="center">
+  <a href="https://www.youtube.com/playlist?list=PLmlXFuUXRl5BnKM9PM_tT9uIzlwUxGzLb">
+    <img src="./thumbnail.png" width="500"/>
+  </a>
 </p>
 
 # Features
