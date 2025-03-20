@@ -47,8 +47,13 @@ export default function Dashboard() {
           position: { latitude: lat, longitude: lng },
         } = data.latest_solution;
         bounds.extend({ lat, lng });
+
+        // Extend the bounds a little so we can see the area around the location
+        const buffer = 0.001;
+        bounds.extend({ lat: lat - buffer, lng: lng - buffer });
+        bounds.extend({ lat: lat + buffer, lng: lng + buffer });
       }
-      map.fitBounds(bounds, 150);
+      map.fitBounds(bounds, 0);
     }
   }, [actualLocation, core, data, map]);
 
