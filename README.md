@@ -37,6 +37,7 @@ If you'd like to record your own samples or run the receiver in real-time from a
 ### Software
 
 ```bash
+# Make sure you're running Python 3.13
 python -m venv .env
 source .env/bin/activate
 pip install -r requirements.txt
@@ -66,7 +67,8 @@ Phillip Tennen made such a file available as part of his [Gypsum](https://github
 
 1. Download `nov_3_time_18_48_st_ives.zip` from [here](https://github.com/codyd51/gypsum/releases/tag/1.0)
 2. Unzip it.
-3. Run `python -m gpsreceiver -f nov_3_time_18_48_st_ives -t 1699037280`.
+3. Optionally, set `ALL_SATELLITE_IDS` in `config.py` to be `set([25, 28, 31, 32])`. These are the only satellites available in the recording so there's no need to search for any others.
+4. Run `python -m gpsreceiver -f nov_3_time_18_48_st_ives -t 1699037280`.
 
 If you'd like to record your own file:
 
