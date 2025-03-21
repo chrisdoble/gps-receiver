@@ -151,7 +151,7 @@ def _run_http_subprocess(queue: Queue) -> None:
 
             await asyncio.sleep(0.001)
 
-    async def data_checker_ctx(app: web.Application) -> AsyncGenerator[None]:
+    async def data_checker_ctx(app: web.Application) -> AsyncGenerator[None, None]:
         data_checker = asyncio.create_task(check_for_data())
 
         yield
