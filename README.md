@@ -37,7 +37,7 @@ If you'd like to record your own samples or run the receiver in real-time from a
 ### Software
 
 ```bash
-# Make sure you're running Python 3.13
+# Make sure you're running Python >=3.12
 python -m venv .env
 source .env/bin/activate
 pip install -r requirements.txt
