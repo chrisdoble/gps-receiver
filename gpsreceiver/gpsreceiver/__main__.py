@@ -19,6 +19,10 @@ argument_parser.add_argument(
 argument_parser.add_argument(
     "--rtl-sdr", action="store_true", help="run in real time from an RTL-SDR"
 )
+argument_parser.add_argument(
+    "-g", "--gain", type=int,  default=20,  help="front-end gain for RTL-SDR (default 20)"
+)
+
 args = argument_parser.parse_args()
 
 try:
@@ -29,7 +33,7 @@ try:
             datetime.fromtimestamp(float(args.time), tz=timezone.utc),
         ).start()
     elif args.rtl_sdr:
-        RtlSdrAntenna(Receiver(SubprocessAcquirer(), run_http_server=False)).start()
+        RtlSdrAntenna(Receiver(SubprocessAcquirer(), run_http_server=False), gain=args.gain).start()
     else:
         argument_parser.print_help()
 except KeyboardInterrupt:
