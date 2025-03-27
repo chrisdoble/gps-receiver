@@ -85,7 +85,7 @@ class RtlSdrAntenna(Antenna):
     It's assumed that a single RTL-SDR is connected to the computer.
     """
 
-    def __init__(self, receiver: Receiver) -> None:
+    def __init__(self, receiver: Receiver, gain: int) -> None:
         super().__init__(receiver)
 
         # pyrtlsdr requires that you receive a multiple of 512 samples at a
@@ -95,13 +95,14 @@ class RtlSdrAntenna(Antenna):
         # This attribute is used to store the leftover samples which are
         # prepended to the next chunk of samples and forwarded to the receiver.
         self._samples: Samples | None = None
+        self._gain: int = gain
 
     def start(self) -> None:
         rtl_sdr = RtlSdr()
         rtl_sdr.set_bandwidth(SAMPLES_PER_SECOND)
         rtl_sdr.set_bias_tee(True)
         rtl_sdr.set_center_freq(L1_FREQUENCY)
-        rtl_sdr.set_gain(20)
+        rtl_sdr.set_gain(self._gain)
         rtl_sdr.set_sample_rate(SAMPLES_PER_SECOND)
 
         signal.signal(signal.SIGINT, lambda signal, frame: rtl_sdr.cancel_read_async())
